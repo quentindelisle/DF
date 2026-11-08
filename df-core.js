@@ -136,7 +136,9 @@ buildSeance = function(n, ids){
 
 /* ---------- VMA ---------- */
 function dfTestVma(n, sid, i){ const x = dfX(n, sid, i); if (!x || x.ab) return null; const d = dfTestDist(x); return d == null ? null : r10(d / 100, 2); }
-function dfTestDist(x){ if (!x) return null; const L = (x.laps || []).length; if (x.plot == null && !L) return null; return L * dfLap() + (x.plot || 0); }
+/* demi-Cooper : numéro du plot d'arrêt (plots numérotés en continu tous les dfPlotStep() m) */
+function dfTestPn(x){ return x && x.pn != null ? x.pn : null; }
+function dfTestDist(x){ const k = dfTestPn(x); return k == null ? null : k * dfPlotStep(); }
 function dfVmaRef(n, sid, i){
   const man = S.params && S.params.vmaMan && S.params.vmaMan[sid];
   if (man) return { v: +man, src: 'fixée par l\'enseignant' };
@@ -223,7 +225,7 @@ calcAll = function(n, sid){
 entryDone = function(n, sid){ const E = dfExs(n); return E.length > 0 && E.every((e, i) => { const x = dfX(n, sid, i); return x && (x.ab || dfExDone(n, sid, i)); }); };
 function dfExDone(n, sid, i){
   const e = dfEx(n, i), x = dfX(n, sid, i); if (!e || !x) return false;
-  if (DF_TEST(e.t)) return dfTestDist(x) != null && x.plot != null;
+  if (DF_TEST(e.t)) return dfTestPn(x) != null;
   if (e.t === 'equipe') return (x.laps || []).length > 0;
   if (e.t === 'aventuriers') return (x.buys || []).length > 0;
   if (e.t === 'pelotons' || e.t === 'eval') return (x.c || []).filter(c => c && c.t).length >= e.nb;

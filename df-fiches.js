@@ -7,8 +7,8 @@ const DF_FICHES = {
   cooper:{
     but:'Mesurer sa VMA : courir la plus grande distance possible en 6 minutes. VMA (km/h) = distance (m) ÷ 100.',
     mat:['Plots numérotés (voir placement)', 'Une tablette par groupe', 'Sifflet'],
-    deroul:['Échauffement 10 min progressif (footing, gammes, 2 accélérations).', 'Un groupe court, l\'autre observe : un observateur par coureur.', 'Départ commun au signal ; le chronométreur lance le compte à rebours de 6 min sur la tablette.', 'À chaque passage sur la ligne, l\'observateur touche la tuile de son coureur.', 'Au coup de sifflet, chaque coureur s\'arrête sur place et lève le bras ; l\'observateur repère le dernier plot dépassé.', 'Sur la tablette : « Placer au plot d\'arrêt » → sélectionner les coureurs arrêtés au même plot → toucher le plot.', 'Récupération active 5 min, puis on inverse les rôles.'],
-    roles:['Coureur : partir à une allure tenable, accélérer sur la dernière minute', 'Observateur : compter les tours, repérer le plot d\'arrêt', 'Chronométreur : départ, annonce des minutes et des 30 dernières secondes'],
+    deroul:['Échauffement 10 min progressif (footing, gammes, 2 accélérations).', 'Un groupe court, l\'autre observe : un observateur par coureur, qui compte ses tours.', 'Départ commun au signal ; le chronométreur lance le compte à rebours de 6 min sur la tablette.', 'Au coup de sifflet, chaque coureur s\'arrête sur place ; l\'observateur relève le numéro du dernier plot dépassé (plots numérotés en continu : 8, 9, 10… 40).', 'Sur la tablette : sélectionner les coureurs arrêtés au même plot → toucher le numéro (case 8 à 40). Plot n = VMA de n ÷ 2 km/h avec des plots tous les 50 m.', 'Récupération active 5 min, puis on inverse les rôles.'],
+    roles:['Coureur : partir à une allure tenable, accélérer sur la dernière minute', 'Observateur : compter les tours pour annoncer le bon numéro de plot', 'Chronométreur : départ, annonce des minutes et des 30 dernières secondes'],
     reussite:['Allure régulière : pas de départ en sprint', 'Aucun arrêt pendant les 6 minutes', 'Dernier tour au moins aussi rapide que les autres'],
     secu:['Échauffement complet obligatoire', 'Le coureur arrêté sort de la piste par l\'intérieur', 'Signaler tout malaise : arrêt immédiat'],
     vari:['Couloir en aller-retour si pas de piste', 'Annonce des temps de passage pour apprendre l\'allure'] },
@@ -75,7 +75,7 @@ function dfFiche(t, n, i){
   const li = a => `<ul>${a.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
   let extra = '';
   if (e) extra += `<p class="pill tgt">${esc(dfExSummary(e))}</p>`;
-  if (DF_TEST(t)) extra += dfPisteSVG(dfPiste().mode, dfPiste().L, { plots: dfPlots() }) + `<p><b>${dfPlots().length} plots tous les ${fmtN(dfPlotStep(), 0)} m</b> (1 tour = ${dfLap()} m) : chaque plot = +${fmtN(dfPlotStep() / 100, 2)} km/h.</p>`;
+  if (DF_TEST(t)) extra += dfPisteSVG(dfPiste().mode, dfPiste().L, { plots: dfPlots() }) + `<p><b>Un plot tous les ${fmtN(dfPlotStep(), 0)} m</b>, numérotés en continu : plot n = ${fmtN(dfPlotStep() / 100, 2)} × n km/h. Bouton « 📍 Placement des plots » : numéros à écrire sur chaque plot.</p>`;
   if (t === 'aventuriers') extra += `<div class="df-map small"><svg viewBox="0 0 ${DF_PLATEAU.w} ${DF_PLATEAU.h}"><image href="aventuriers/plateau.jpg" width="${DF_PLATEAU.w}" height="${DF_PLATEAU.h}"/></svg></div><p>1 tronçon = 1 tour de ${dfLap()} m.</p>`;
   if (t === 'pelotons') extra += `<p><b>Jokers :</b></p>${li(dfJoks().map(j => `${j.l} · ${j.p === 'n' ? '1 pt par coureur doublé' : j.p + ' pts'}`))}`;
   modal(`<h2>📖 ${X.ico} ${esc(X.n)}</h2>${extra}<h3>But</h3><p>${esc(F.but)}</p><h3>Matériel et mise en place</h3>${li(F.mat)}<h3>Déroulement</h3><ol>${F.deroul.map(x => `<li>${esc(x)}</li>`).join('')}</ol>
@@ -95,7 +95,7 @@ makeDemoClass = function(){
     dfExs(l).forEach((e, i) => S.students.forEach((s, k) => { const r = S.results[l][s.id]; if (!r) return; r.v.x = r.v.x || {}; const vma = V[s.id] + (l > 2 ? 0.6 : 0);
       const mate = S.students.find(o => o.id !== s.id && o.grp === s.grp && ((S.students.indexOf(o) + 1) % S.students.length) !== k) || S.students[(k + 1) % S.students.length];
       const pil = () => ({ by: mate.id, ...Object.fromEntries(DF_PIL.map(p => [p.id, p.desc[Math.min(p.desc.length - 1, Math.floor(Math.random() * p.desc.length))].v])) });
-      if (DF_TEST(e.t)) { const d = Math.round(vma * 100 / dfPlotStep()) * dfPlotStep(); r.v.x[i] = { laps: Array.from({ length: Math.floor(d / lap) }, (_, q) => r10((q + 1) * lap / (vma / 3.6), 1)), plot: r10(d % lap, 1), ts: now() }; if (e.t === 'cooper') V[s.id] = d / 100; }
+      if (DF_TEST(e.t)) { const k = Math.max(8, Math.min(40, Math.round(vma * 100 / dfPlotStep()))); r.v.x[i] = { pn: k, ts: now() }; if (e.t === 'cooper') V[s.id] = k * dfPlotStep() / 100; }
       else if (e.t === 'equipe') { const n = Math.round(e.dur * 60 * vma * 0.75 / 3.6 / lap); let t = 0; r.v.x[i] = { laps: Array.from({ length: n }, () => r10(t += lap / (vma * rnd_(0.7, 0.85) / 3.6), 1)), ts: now() }; }
       else if (e.t === 'aventuriers') { const R = DF_ROUTES.map((x, q) => q).filter(q => q % S.students.length === k || (q + 7) % S.students.length === k).slice(0, 3); r.v.x[i] = { buys: R.map((q, z) => ({ r: q, ts: now() - 1e6 + k * 1000 + z * 60000 })), ts: now() }; }
       else if (e.t === 'pelotons') r.v.x[i] = { c: Array.from({ length: e.nb }, (_, q) => { const J = dfJoks()[(k + q) % dfJoks().length]; return { t: r10(dfTime(e.d, vma, rnd_(108, 128)), 2), j: J.id, ok: Math.random() < 0.55, nd: J.p === 'n' ? 2 : 0 }; }), ts: now() };
@@ -128,6 +128,10 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 .df-minus{left:6px;bottom:6px}.df-plus{left:52px;bottom:6px}.df-pz{right:52px;bottom:6px}.df-pz.on{background:#FFD000}
 td .df-ab{position:static}.df-fo{position:static;margin-left:6px}.df-fo.on{background:#FFD000;border-color:#F59E0B}
 .df-plotbar.dim{opacity:.7}.df-plotbar .btn-row{margin-top:8px}
+.df-pn{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:8px;margin-top:10px}
+.df-pnb{border:3px solid var(--navy);border-radius:12px;background:#fff;color:var(--navy);padding:6px 2px;display:flex;flex-direction:column;align-items:center;min-height:62px}
+.df-pnb b{font-size:24px;line-height:1}.df-pnb small{font-size:12px;font-weight:700;color:var(--grey)}
+.df-pnb:not([disabled]):active{background:var(--orange);color:#fff}.df-pnb[disabled]{opacity:.45}
 .df-wide{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}.df-wide .tile.df-tile{align-items:flex-start;padding-bottom:52px}
 .df-fin{min-height:58px;font-size:20px}.df-jok{text-align:left}
 .df-score{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:10px}

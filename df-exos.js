@@ -43,31 +43,34 @@ const dfMyTab = e => Math.min(ROOT.dfTab || 0, (e.tabs || 1) - 1);
    ===================================================================== */
 function dfBatsNote(g){ if (g == null) return null; if (g < -1) return 1; if (g < -0.25) return 2; if (g < 0.5) return 3; if (g < 1.5) return 4; if (g < 2.5) return 5; return 6; }
 function dfBatsGain(n, sid, i){ const v = dfTestVma(n, sid, i), r = dfVmaRef(n, sid, i); return v == null || !r ? null : r10(v - r.v, 2); }
+const DF_PN = Array.from({ length: 33 }, (_, k) => k + 8);          // cases 8 à 40
+/* plot physique correspondant à un numéro de case (numérotation continue tous les dfPlotStep() m) */
+function dfPlotPos(k){
+  const P = dfPiste(), s = dfPlotStep();
+  if (P.mode === 'couloir') { const K = Math.round(P.L / s), q = k % (2 * K); return { cone: q <= K ? q : 2 * K - q, m: (q <= K ? q : 2 * K - q) * s, sens: q === 0 ? 'départ' : q < K ? 'aller' : q === K ? 'demi-tour' : 'retour' }; }
+  const M = Math.round(dfLap() / s), j = k % M; return { cone: j, m: j * s, sens: '' };
+}
 function dfTestView(n, i, e){
-  const key = `t${n}-${i}`, list = dfGroupList().filter(s => dfPresent(n, s.id)), lap = dfLap(), mode = UI.dfMode || 'tours', sel = UI.dfSel || [];
+  const key = `t${n}-${i}`, list = dfGroupList().filter(s => dfPresent(n, s.id)), sel = UI.dfSel || [], st = dfPlotStep();
   let h = `${groupChips(ROOT.grp != null && ROOT.grp < nbGroups() ? ROOT.grp : null)}
-    <div class="card df-setup"><b>📐 Mise en place :</b> ${dfPiste().mode === 'couloir' ? `couloir de ${dfPiste().L} m en aller-retour (1 tour = ${lap} m)` : `piste de ${lap} m`}, ${dfPlots().length} plots tous les ${fmtN(dfPlotStep(), 0)} m.
+    <div class="card df-setup"><b>📐 Mise en place :</b> ${dfPiste().mode === 'couloir' ? `couloir de ${dfPiste().L} m en aller-retour` : `piste de ${dfLap()} m`}, un plot tous les ${fmtN(st, 0)} m, numérotés en continu (plot n = n × ${fmtN(st, 0)} m).
       <button class="btn small" data-action="dfPlotsGuide">📍 Placement des plots</button></div>
     ${dfTimerHTML(key, [{ n:'Demi-Cooper · 6 min', s: e.dur || 360 }])}
-    <div class="btn-row df-modes"><button class="btn ${mode === 'tours' ? 'primary' : ''}" data-action="dfMode" data-m="tours">🏃 1. Compter les tours</button>
-      <button class="btn ${mode === 'plot' ? 'primary' : ''}" data-action="dfMode" data-m="plot">📍 2. Placer au plot d'arrêt</button></div>
-    <p class="muted">${mode === 'tours' ? 'Touchez la tuile du coureur à chaque passage sur la ligne (− pour corriger). Un passage plus rapide que 26 km/h est ignoré.' : 'Au coup de sifflet, chaque coureur s\'arrête : touchez les tuiles des coureurs arrêtés au même plot, puis le plot.'}</p>`;
-  if (mode === 'plot') h += `<div class="card df-plotbar ${sel.length ? '' : 'dim'}"><b>${sel.length ? sel.length + ' coureur(s) sélectionné(s) → plot d\'arrêt :' : 'Sélectionnez des coureurs'}</b>
-    <div class="btn-row">${dfPlots().map(p => `<button class="btn small" data-action="dfPlot" data-d="${p.d}" ${sel.length ? '' : 'disabled'}>${esc(p.l)}</button>`).join('')}
-    <button class="btn small ghost" data-action="dfSetLaps" ${sel.length ? '' : 'disabled'}>✎ Tours…</button><button class="btn small ghost" data-action="dfSelAll">Tout / rien</button></div></div>`;
-  h += `<div class="tiles">${list.map(s => { const x = dfX(n, s.id, i) || {}, L = (x.laps || []).length, v = dfTestVma(n, s.id, i), last = L > 1 && x.laps[L - 1] != null && x.laps[L - 2] != null ? x.laps[L - 1] - x.laps[L - 2] : L === 1 && x.laps[0] != null ? x.laps[0] : null;
+    <p class="muted">Au coup de sifflet, chaque coureur s'arrête et annonce le numéro du dernier plot dépassé. Touchez les tuiles des coureurs arrêtés au même plot, puis le numéro du plot.</p>
+    <div class="card df-plotbar ${sel.length ? '' : 'dim'}"><div class="btn-row spread"><b>${sel.length ? sel.length + ' coureur(s) sélectionné(s) → plot d\'arrêt :' : 'Sélectionnez des coureurs, puis le plot'}</b><button class="btn small ghost" data-action="dfSelAll">Tout / rien</button></div>
+      <div class="df-pn">${DF_PN.map(k => `<button class="df-pnb" data-action="dfPlot" data-k="${k}" ${sel.length ? '' : 'disabled'}><b>${k}</b><small>${fmtN(k * st / 100, 1)} km/h</small></button>`).join('')}</div></div>`;
+  h += `<div class="tiles">${list.map(s => { const x = dfX(n, s.id, i) || {}, v = dfTestVma(n, s.id, i), pn = dfTestPn(x);
     const g = e.t === 'bats' ? dfBatsGain(n, s.id, i) : null, ref = e.t === 'bats' ? dfVmaRef(n, s.id, i) : null;
-    const inner = `<span class="df-big">${L}<small> tour${L > 1 ? 's' : ''}</small></span>
-      <span class="meta">${x.plot != null ? `+${fmtN(x.plot, 0)} m · <b>${fmtN(v, 1)} km/h</b>` : last != null ? 'dernier tour ' + dfT(last) : '&nbsp;'}</span>
-      ${e.t === 'bats' ? `<span class="meta">${ref ? `avant : ${fmtN(ref.v, 1)}` : 'pas de VMA avant'}${g != null ? ` · <b class="${g >= 0 ? 'up' : 'down'}">${g >= 0 ? '+' : '−'}${fmtN(Math.abs(g), 1)}</b> · ${dfBatsNote(g)}/6` : ''}</span>` : ''}
-      ${mode === 'tours' ? `<button class="df-minus" data-action="dfLapUndo" data-sid="${s.id}" data-i="${i}">−</button>` : ''}${dfAbBtn(n, i, s.id)}`;
-    return dfTile(s.id, inner, { cls: `${mode === 'plot' && sel.includes(s.id) ? 'sel' : ''} ${x.ab ? 'abd' : ''}`, attrs: `data-action="${mode === 'tours' ? 'dfLapAdd' : 'dfSel'}" data-sid="${s.id}" data-i="${i}"` }); }).join('')}</div>`;
+    const inner = `<span class="df-big">${pn != null ? pn : '—'}<small> ${pn != null ? 'plot' : ''}</small></span>
+      <span class="meta">${v != null ? `<b>${fmtN(v, 1)} km/h</b> · ${fmtN(dfTestDist(x), 0)} m` : '&nbsp;'}</span>
+      ${e.t === 'bats' ? `<span class="meta">${ref ? `avant : ${fmtN(ref.v, 1)}` : 'pas de VMA avant'}${g != null ? ` · <b class="${g >= 0 ? 'up' : 'down'}">${g >= 0 ? '+' : '−'}${fmtN(Math.abs(g), 1)}</b> · ${dfBatsNote(g)}/6` : ''}</span>` : ''}${dfAbBtn(n, i, s.id)}`;
+    return dfTile(s.id, inner, { cls: `${sel.includes(s.id) ? 'sel' : ''} ${x.ab ? 'abd' : ''}`, attrs: `data-action="dfSel" data-sid="${s.id}" data-i="${i}"` }); }).join('')}</div>`;
   return h;
 }
 DF_VIEWS.cooper = { view: dfTestView };
 DF_VIEWS.bats = { view: dfTestView };
-DF_LINE.cooper = DF_LINE.bats = (n, sid, i, e) => { const x = dfX(n, sid, i); if (!x) return ''; const v = dfTestVma(n, sid, i), g = e.t === 'bats' ? dfBatsGain(n, sid, i) : null;
-  return `<div class="muted">${(x.laps || []).length} tours${x.plot != null ? ' + ' + fmtN(x.plot, 0) + ' m' : ''} · VMA <b>${v == null ? '—' : fmtN(v, 1) + ' km/h'}</b>${g != null ? ` · progrès ${g >= 0 ? '+' : '−'}${fmtN(Math.abs(g), 1)} km/h · note ${dfBatsNote(g)}/6` : ''}</div>`; };
+DF_LINE.cooper = DF_LINE.bats = (n, sid, i, e) => { const x = dfX(n, sid, i); if (!x) return ''; const v = dfTestVma(n, sid, i), g = e.t === 'bats' ? dfBatsGain(n, sid, i) : null, pn = dfTestPn(x);
+  return `<div class="muted">${pn != null ? 'Plot ' + pn + ' · ' + fmtN(dfTestDist(x), 0) + ' m' : '—'} · VMA <b>${v == null ? '—' : fmtN(v, 1) + ' km/h'}</b>${g != null ? ` · progrès ${g >= 0 ? '+' : '−'}${fmtN(Math.abs(g), 1)} km/h · note ${dfBatsNote(g)}/6` : ''}</div>`; };
 
 /* Schéma et mesures pour placer les plots */
 function dfPisteSVG(mode, L, opts = {}){
@@ -90,16 +93,16 @@ function dfPisteSVG(mode, L, opts = {}){
     ${plots.map((p, k) => { const [x, y] = pt(p.d); return `<g><circle cx="${x}" cy="${y}" r="13" fill="#F7941D" stroke="#0B346E" stroke-width="2.5"/><text x="${x}" y="${y + 5}" text-anchor="middle" font-size="13" font-weight="900" fill="#0B346E">${k}</text></g>`; }).join('')}</svg>`;
 }
 function dfPlotsGuide(){
-  const P = dfPiste(), lap = dfLap(), s = dfPlotStep(), plots = dfPlots(), maxT = Math.ceil(2400 / lap);
-  const rows = Array.from({ length: maxT }, (_, k) => k + Math.max(1, Math.floor(600 / lap)) - 1).filter(t => t >= 0 && t * lap <= 2600);
+  const P = dfPiste(), s = dfPlotStep(), plots = P.mode === 'couloir' ? Array.from({ length: Math.round(P.L / s) + 1 }, (_, c) => ({ d: c * s })) : dfPlots();
+  const nums = c => DF_PN.filter(k => dfPlotPos(k).cone === c);
   modal(`<h2>📍 Placement des plots · demi-Cooper</h2>${dfPisteSVG(P.mode, P.L, { plots })}
     <div class="df-steps"><p><b>Pour les observateurs :</b></p><ol>
-      <li>Plot 0 sur la ligne de départ${P.mode === 'couloir' ? ' (début du couloir) ; un plot au demi-tour à ' + P.L + ' m' : ''}.</li>
-      <li>Puis un plot tous les <b>${fmtN(s, 0)} m</b> dans le sens de la course (au décamètre, ou ≈ ${Math.round(s / 0.8)} grands pas de 80 cm)${P.mode === 'couloir' ? ', à l\'aller seulement : au retour on lit les mêmes plots à l\'envers' : ''}.</li>
-      <li>${P.mode === 'couloir' ? (Math.round(P.L / s) + 1) + ' plots posés de 0 à ' + P.L + ' m, relus au retour : ' + plots.length + ' repères par tour' : plots.length + ' plots en tout'}. Chaque plot = <b>+${fmtN(s / 100, 2)} km/h</b> de VMA (VMA = distance en 6 min ÷ 100).</li>
-      <li>Au coup de sifflet des 6 min, chaque coureur s'arrête sur place ; on retient le dernier plot dépassé.</li></ol></div>
-    <div class="scroll-x"><table class="tbl df-conv"><thead><tr><th>Tours</th>${plots.map(p => `<th>${esc(p.l)}</th>`).join('')}</tr></thead><tbody>
-      ${rows.map(t => `<tr><td><b>${t}</b></td>${plots.map(p => `<td>${fmtN((t * lap + p.d) / 100, 1)}</td>`).join('')}</tr>`).join('')}</tbody></table><p class="muted small">VMA en km/h selon le nombre de tours complets et le plot d'arrêt.</p></div>
+      <li>Plot de départ sur la ligne${P.mode === 'couloir' ? ' (début du couloir) ; un plot au demi-tour à ' + P.L + ' m' : ''}.</li>
+      <li>Puis un plot tous les <b>${fmtN(s, 0)} m</b> dans le sens de la course (au décamètre, ou ≈ ${Math.round(s / 0.8)} grands pas de 80 cm)${P.mode === 'couloir' ? ', à l\'aller : au retour on repasse devant les mêmes plots' : ''}.</li>
+      <li>Les plots sont <b>numérotés en continu</b> : plot n = n × ${fmtN(s, 0)} m depuis le départ, donc VMA = <b>${fmtN(s / 100, 2)} × n</b> km/h${s === 50 ? ' (plot 24 → 12 km/h)' : ''}. Chaque plot posé porte plusieurs numéros (un par tour) : écrivez-les dessus.</li>
+      <li>Au coup de sifflet des 6 min, chaque coureur s'arrête sur place et annonce le numéro du dernier plot dépassé (en comptant ses tours).</li></ol></div>
+    <div class="scroll-x"><table class="tbl df-conv"><thead><tr><th>Plot posé</th><th>Numéros à écrire dessus</th><th>VMA</th></tr></thead><tbody>
+      ${plots.map((p, c) => `<tr><td><b>${fmtN(p.d, 0)} m</b>${P.mode === 'couloir' ? (c === 0 ? ' · départ' : Math.abs(p.d - P.L) < 0.1 ? ' · demi-tour' : '') : ''}</td><td><b>${nums(c).join(' · ')}</b></td><td><small>${nums(c).map(k => fmtN(k * s / 100, 1)).join(' · ')}</small></td></tr>`).join('')}</tbody></table></div>
     <div class="btn-row spread no-print" style="margin-top:12px"><button class="btn" data-print>🖨 Imprimer</button><button class="btn primary" data-close>Fermer</button></div>`, { wide: true });
   dfModalBind();
 }
@@ -274,10 +277,9 @@ DF_LINE.eval = (n, sid, i, e) => { const S_ = dfEvScore(n, sid, i, e); if (!S_) 
 
 /* ---------- Actions des exercices ---------- */
 Object.assign(ACT, {
-  dfMode: d => { UI.dfMode = d.m; UI.dfSel = []; rerender(); },
   dfSel: d => { const a = UI.dfSel = UI.dfSel || [], k = a.indexOf(d.sid); if (k >= 0) a.splice(k, 1); else a.push(d.sid); rerender(); },
   dfSelAll: () => { const n = curLesson(), L = dfGroupList().filter(s => dfPresent(n, s.id)).map(s => s.id); UI.dfSel = (UI.dfSel || []).length === L.length ? [] : L; rerender(); },
-  dfPlot: d => { const n = curLesson(), i = UI.ex; (UI.dfSel || []).forEach(sid => dfSetX(n, sid, i, o => { o.plot = +d.d; })); UI.dfSel = []; toast('✓ Plot enregistré'); rerender(); },
+  dfPlot: d => { const n = curLesson(), i = UI.ex, k = +d.k; (UI.dfSel || []).forEach(sid => dfSetX(n, sid, i, o => { o.pn = k; delete o.laps; delete o.plot; })); UI.dfSel = []; toast(`✓ Plot ${k} · ${fmtN(k * dfPlotStep() / 100, 1)} km/h`); rerender(); },
   dfSetLaps: async () => { const n = curLesson(), i = UI.ex, v = await numberBox('Nombre de tours complets', null, { step: 1, min: 0, max: 40 }); if (v == null) return;
     (UI.dfSel || []).forEach(sid => dfSetX(n, sid, i, o => { const L = o.laps || []; o.laps = Array.from({ length: Math.round(v) }, (_, k) => L[k] ?? null); })); rerender(); },
   dfLapAdd: (d, el, force) => { const n = curLesson(), i = +d.i, e = dfEx(n, i), T = dfTimer(`${DF_TEST(e.t) ? 't' : 'q'}${n}-${i}`), t = T.run || T.acc ? r10(dfTNow(T), 2) : null;

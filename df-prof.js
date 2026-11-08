@@ -184,8 +184,8 @@ function dfProfBilan(){
 }
 const dfRowsP = (n, f) => sortedStudents().filter(s => dfPresent(n, s.id)).map(f).join('');
 const DF_BILAN = {
-  cooper: (n, i, e) => `<table class="tbl"><thead><tr><th>Élève</th><th>Tours</th><th>Plot</th><th>Distance</th><th>VMA</th>${e.t === 'bats' ? '<th>Avant</th><th>Progrès</th><th>Note /6</th>' : ''}</tr></thead><tbody>${dfRowsP(n, s => { const x = dfX(n, s.id, i) || {}, g = e.t === 'bats' ? dfBatsGain(n, s.id, i) : null, r = e.t === 'bats' ? dfVmaRef(n, s.id, i) : null;
-    return `<tr><td class="nm">${band(s.id)}${esc(nameOf(s.id))}</td><td>${x.ab ? '🚩' : (x.laps || []).length}</td><td>${x.plot != null ? fmtN(x.plot, 0) + ' m' : '—'}</td><td>${dfKm(dfTestDist(x))}</td><td><b>${fmtN(dfTestVma(n, s.id, i), 1)}</b></td>
+  cooper: (n, i, e) => `<table class="tbl"><thead><tr><th>Élève</th><th>Plot d'arrêt</th><th>Distance</th><th>VMA</th>${e.t === 'bats' ? '<th>Avant</th><th>Progrès</th><th>Note /6</th>' : ''}</tr></thead><tbody>${dfRowsP(n, s => { const x = dfX(n, s.id, i) || {}, g = e.t === 'bats' ? dfBatsGain(n, s.id, i) : null, r = e.t === 'bats' ? dfVmaRef(n, s.id, i) : null;
+    return `<tr><td class="nm">${band(s.id)}${esc(nameOf(s.id))}</td><td>${x.ab ? '🚩' : dfTestPn(x) ?? '—'}</td><td>${dfKm(dfTestDist(x))}</td><td><b>${fmtN(dfTestVma(n, s.id, i), 1)}</b></td>
       ${e.t === 'bats' ? `<td>${r ? fmtN(r.v, 1) : '—'}</td><td>${g == null ? '—' : (g >= 0 ? '+' : '−') + fmtN(Math.abs(g), 1)}</td><td><b>${dfBatsNote(g) ?? '—'}</b></td>` : ''}</tr>`; })}</tbody></table>`,
   equipe: (n, i, e) => { const teams = dfTeams(n, i, e);
     return Array.from({ length: e.nbEq }, (_, t) => { const M = sortedStudents().filter(s => teams[s.id] === t && dfPresent(n, s.id)), tl = M.reduce((a, s) => a + ((dfX(n, s.id, i) || {}).laps || []).length, 0);

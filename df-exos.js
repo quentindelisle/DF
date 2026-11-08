@@ -241,7 +241,8 @@ function dfPilModal(n, sid, i){
   const m = modal(`<h2>👀 Piliers de ${esc(nameOf(sid))}</h2>
     ${keys.length > 1 ? `<div class="lchips"><b>Passage</b>${keys.map(k => `<button class="chip ${k === key ? 'on' : ''}" data-pk="${k}">${k.replace(/s(\d+)r(\d+)/, (z, a, b) => (e.series > 1 ? 'S' + (+a + 1) + '·' : '') + (+b + 1))}</button>`).join('')}</div>` : ''}
     <div class="lchips"><b>Observateur</b>${mates.map(s => `<button class="chip ${o.by === s.id ? 'on' : ''}" data-by="${s.id}">${esc(nameOf(s.id))}</button>`).join('')}</div>
-    ${dfPilForm(o, 'dfPilSet', `data-sid="${sid}" data-i="${i}" data-key="${key}"`)}
+    <p class="muted">🎯 Pilier${dfLessonPil(n).length > 1 ? 's' : ''} de la leçon : <b>${esc(dfPilNames(dfLessonPil(n)))}</b></p>
+    ${dfPilForm(o, 'dfPilSet', `data-sid="${sid}" data-i="${i}" data-key="${key}"`, dfLessonPil(n))}
     <div class="btn-row spread" style="margin-top:12px"><span class="muted">${dfPilMean(o) != null ? 'Score : ' + Math.round(dfPilMean(o) * 100) + ' %' : ''}</span><button class="btn primary" data-x>Fermer</button></div>`, { wide: true });
   m.querySelector('[data-x]').onclick = () => { closeModal(); rerender(); };
   m.querySelectorAll('[data-pk]').forEach(b => b.onclick = () => { UI.dfPk = b.dataset.pk; dfPilModal(n, sid, i); });

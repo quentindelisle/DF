@@ -108,6 +108,8 @@ makeDemoClass = function(){
 /* ---------- Styles propres à l'appli ---------- */
 document.head.insertAdjacentHTML('beforeend', `<style>
 .df-sub{margin:18px 0 8px}
+.df-help{background:#EAF2FB;border-color:var(--navy)}.df-pilfocus{color:#B5514C;font-weight:800;margin:0 0 8px}
+.df-pilcfg>div:first-child{flex:1;min-width:220px}
 .df-exgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
 .df-exbtn{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;border:3px solid var(--xc);border-left-width:12px;border-radius:14px;background:#fff;padding:12px 14px;color:var(--ink)}
 .df-exbtn .ico{font-size:30px}.df-exbtn b{font-size:19px}.df-exbtn small{color:var(--grey);font-weight:600}

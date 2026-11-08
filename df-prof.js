@@ -6,7 +6,8 @@
    ===================================================================== */
 'use strict';
 
-PTABS.plan = { n:'Programmation du cycle', ico:'🗺️' };
+PTABS.lecons.n = 'Paramètres du cycle'; PTABS.lecons.ico = '⚙️';
+PTABS.plan = { n:'Programmation des leçons', ico:'🗺️' };
 PTABS.vma = { n:'VMA des élèves', ico:'⚡' };
 PTABS.pilprof = { n:'Piliers (enseignant)', ico:'🎓' };
 PTABS.bilanDF = { n:'Bilan des exercices', ico:'🏃' };
@@ -17,9 +18,18 @@ const _dfViewProf = viewProf;
 viewProf = () => ({ plan: dfProfPlan, vma: dfProfVma, pilprof: dfProfPil, bilanDF: dfProfBilan, evalDF: dfProfEval }[UI.profTab] || _dfViewProf)();
 
 /* ---------- Paramètres du cycle : le plan remplace le nombre d'essais ---------- */
-const _dfProfLecons = profLecons;
-profLecons = () => _dfProfLecons().replace(/<div class="form-row"><span>Nombre d'essais par élève<\/span>[\s\S]*?<\/div><\/div>/,
-  `<div class="form-row"><span>Exercices de la leçon</span><button class="btn small" data-action="tab" data-tab="plan">${esc(dfLessonSummary(curLesson()))} ✎</button></div>`);
+profLecons = () => { const n = curLesson();
+  return `<div class="card df-help"><b>⚙️ Paramètres du cycle</b> : ce qui vaut pour tout le cycle (piste, piliers, jokers). Le contenu de chaque leçon se prépare dans <button class="btn small" data-action="tab" data-tab="plan">🗺️ Programmation des leçons</button></div>
+    <div class="card"><div class="btn-row spread"><h3 style="margin:0">Nombre de leçons du cycle</h3>${stepper('nbLessons', S.settings.nbLessons)}</div></div>
+    <div class="card"><h3>Leçon en cours</h3><div class="lchips">${Array.from({ length: S.settings.nbLessons }, (_, i) => i + 1).map(l => `<button class="chip ${l === n ? 'on' : ''} ${lesson(l).ev ? 'ev' : ''}" data-action="setLesson" data-n="${l}">${l}${lesson(l).ev ? ' 📝' : ''}</button>`).join('')}</div>
+      <p class="muted">${esc(lessonLabel(n))} · ${esc(dfLessonSummary(n))}</p></div>
+    ${dfPisteCard()}${dfPilCfgCard()}${dfJokCard()}` + displayCard() + frChoiceCard() + newCycleCard(); };
+function dfPilCfgCard(){
+  const L = { on:'Oui / non', ech:'Échelle 1 à 10', desc:'Descriptif moteur' };
+  return `<div class="card"><h3>🎯 Piliers</h3><p class="muted">Forme de saisie de chaque pilier (observateurs et enseignant). Le ou les piliers observés se choisissent leçon par leçon dans la Programmation des leçons.</p>
+    ${DF_PIL.map(p => { const m = dfPilMode(p); return `<div class="form-row df-pilcfg"><div><b>${esc(p.n)}</b><br><small class="muted">${esc(m === 'on' ? p.crit.join(' · ') : m === 'desc' ? p.desc.map(d => d.l).join(' · ') : 'de 1 (pas du tout) à 10 (parfaitement)')}</small></div>
+      <div class="choices">${Object.entries(L).map(([k, l]) => `<button class="ch ${m === k ? 'on' : ''}" data-action="dfPilMode" data-p="${p.id}" data-m="${k}" ${m === k ? 'style="background:var(--navy);border-color:var(--navy);color:#fff"' : ''}>${l}</button>`).join('')}</div></div>`; }).join('')}</div>`;
+}
 
 /* ---------- Appel : état de forme ---------- */
 const _dfProfAppel = profAppel;
@@ -105,26 +115,29 @@ function dfJokCard(){
 }
 function dfProfPlan(){
   const n = UI.planL && UI.planL <= S.settings.nbLessons ? UI.planL : curLesson(), C = dfCyc(n), E = C.ex || [];
-  return `${dfPisteCard()}
+  return `<div class="card df-help"><b>🗺️ Programmation des leçons</b> : pour chaque leçon, ses exercices, leurs réglages, les équipes et le pilier observé. Piste, forme des piliers et jokers : <button class="btn small" data-action="tab" data-tab="lecons">⚙️ Paramètres du cycle</button></div>
     <div class="card"><div class="btn-row spread"><div class="lchips"><b>Leçon</b>${Array.from({ length: S.settings.nbLessons }, (_, k) => k + 1).map(l => `<button class="chip ${l === n ? 'on' : ''}" data-action="dfPL" data-n="${l}">${l} ${dfExs(l).map(e => DFX[e.t].ico).join('')}</button>`).join('')}</div>
-      <div class="btn-row">${dfStepper('nbLessons', '', S.settings.nbLessons + ' leçons')}<button class="btn small" data-action="dfCycPrint">🖨 Fiche du cycle</button></div></div>
+      <div class="btn-row"><button class="btn small" data-action="dfCycPrint">🖨 Fiche du cycle</button></div></div>
       <p class="muted">Chaque leçon contient 1 à 4 exercices. <b>Renvoyez le QR de la leçon</b> après une modification.</p></div>
     <div class="card strong"><div class="btn-row spread"><h3 style="margin:0">Leçon ${n} · ${esc(lesson(n).title || C.title || '—')}</h3>
-      <div class="btn-row"><button class="btn small" data-action="dfLTitle" data-n="${n}">✎ Titre</button>${S.params && S.params.cyc && S.params.cyc[n] ? `<button class="btn small ghost" data-action="dfLReset" data-n="${n}">↺ Leçon par défaut</button>` : ''}</div></div></div>
+      <div class="btn-row"><button class="btn small" data-action="dfLTitle" data-n="${n}">✎ Titre</button>${S.params && S.params.cyc && S.params.cyc[n] ? `<button class="btn small ghost" data-action="dfLReset" data-n="${n}">↺ Leçon par défaut</button>` : ''}</div></div>
+      <div class="form-row"><span>Leçon en cours (envoyée par le QR)</span>${n === curLesson() ? '<b>✓ Oui</b>' : `<button class="btn small" data-action="setLesson" data-n="${n}">▶ En faire la leçon en cours</button>`}</div>
+      <div class="form-row"><span>Leçon d'évaluation</span><button class="btn small ${lesson(n).ev ? 'green' : ''}" data-action="dfLEv" data-n="${n}">${lesson(n).ev ? '✓ Oui' : 'Non'}</button></div>
+      <div class="form-row"><span>🎯 Pilier(s) observé(s) pendant la leçon<br><small class="muted">les observateurs ne notent que ceux-là</small></span><div class="choices">${DF_PIL.map(p => { const on_ = (C.pil || DF_PIL.map(x => x.id)).includes(p.id);
+        return `<button class="ch ${on_ ? 'on' : ''}" data-action="dfLPil" data-n="${n}" data-p="${p.id}" ${on_ ? 'style="background:var(--orange);border-color:var(--orange);color:#fff"' : ''}>${esc(p.n)}</button>`; }).join('')}</div></div></div>
     ${E.map((e, i) => `<div class="card df-excard" style="--xc:${DFX[e.t].c}"><div class="btn-row spread"><h3 style="margin:0">${DFX[e.t].ico} ${i + 1}. ${esc(DFX[e.t].n)}</h3>
         <div class="btn-row"><button class="btn small" data-action="dfFiche" data-t="${e.t}" data-n="${n}" data-i="${i}">📖 Fiche</button><button class="btn small ghost" data-action="dfXmv" data-n="${n}" data-i="${i}" data-d="-1" ${i ? '' : 'disabled'}>↑</button>
         <button class="btn small ghost" data-action="dfXmv" data-n="${n}" data-i="${i}" data-d="1" ${i < E.length - 1 ? '' : 'disabled'}>↓</button><button class="btn small ghost" data-action="dfXdel" data-n="${n}" data-i="${i}">🗑</button></div></div>
       <p class="muted">${esc(dfExSummary(e))}</p>
       ${DF_FRAC(e.t) ? dfFracEditor(n, i, e) : DF_TEST(e.t) ? `<p>${e.t === 'bats' ? '🔥 Retest du demi-Cooper : évaluation intermédiaire notée /6 sur le progrès de VMA ; la nouvelle VMA sert aux cibles des fractionnés et de l\'évaluation.' : '⏱️ 6 minutes de course, VMA = distance ÷ 100.'}</p><button class="btn small" data-action="dfPlotsGuide">📍 Placement des plots</button>` : dfSchemaRows(n, i, e)}
       ${['equipe', 'aventuriers', 'pelotons'].includes(e.t) ? `<details class="df-compd" ${UI.dfComp === n + '-' + i ? 'open' : ''}><summary data-action="dfComp" data-k="${n}-${i}"><b>🧩 ${e.t === 'pelotons' ? 'Séries' : 'Équipes'}${e.t === 'aventuriers' ? ' et parcours' : ''}</b></summary>${UI.dfComp === n + '-' + i ? dfComposer(n, i, e) : ''}</details>` : ''}</div>`).join('')}
-    ${E.length < 4 ? `<div class="card"><b>＋ Ajouter un exercice</b><div class="df-exgrid">${Object.entries(DFX).map(([t, X]) => `<button class="df-exbtn" style="--xc:${X.c}" data-action="dfXadd" data-n="${n}" data-t="${t}"><span class="ico">${X.ico}</span><b>${esc(X.n)}</b></button>`).join('')}</div></div>` : '<p class="muted">4 exercices au maximum par leçon.</p>'}
-    ${dfJokCard()}`;
+    ${E.length < 4 ? `<div class="card"><b>＋ Ajouter un exercice</b><div class="df-exgrid">${Object.entries(DFX).map(([t, X]) => `<button class="df-exbtn" style="--xc:${X.c}" data-action="dfXadd" data-n="${n}" data-t="${t}"><span class="ico">${X.ico}</span><b>${esc(X.n)}</b></button>`).join('')}</div></div>` : '<p class="muted">4 exercices au maximum par leçon.</p>'}`;
 }
 /* fiche du cycle imprimable */
 function dfCycPrint(){
   modal(`<h2>🗺️ ${esc(CFG.name)} · ${esc(className())}</h2><p class="muted">${dfPiste().mode === 'couloir' ? 'Couloir de ' + dfPiste().L + ' m en aller-retour' : 'Piste de ' + dfPiste().L + ' m'} · 1 tour = ${dfLap()} m</p>
-    <table class="tbl"><thead><tr><th>Leçon</th><th>Exercices</th></tr></thead><tbody>${Array.from({ length: S.settings.nbLessons }, (_, k) => k + 1).map(l => `<tr><td><b>L${l}</b><br><small>${esc(lesson(l).title || '')}</small></td>
-      <td>${dfExs(l).map(e => `${DFX[e.t].ico} <b>${esc(DFX[e.t].n)}</b> · ${esc(dfExSummary(e))}`).join('<br>')}</td></tr>`).join('')}</tbody></table>
+    <table class="tbl"><thead><tr><th>Leçon</th><th>Exercices</th><th>🎯 Pilier(s)</th></tr></thead><tbody>${Array.from({ length: S.settings.nbLessons }, (_, k) => k + 1).map(l => `<tr><td><b>L${l}</b><br><small>${esc(lesson(l).title || '')}</small></td>
+      <td>${dfExs(l).map(e => `${DFX[e.t].ico} <b>${esc(DFX[e.t].n)}</b> · ${esc(dfExSummary(e))}`).join('<br>')}</td><td>${esc(dfPilNames(dfLessonPil(l)))}</td></tr>`).join('')}</tbody></table>
     <div class="btn-row spread no-print" style="margin-top:12px"><button class="btn" data-print>🖨 Imprimer</button><button class="btn primary" data-close>Fermer</button></div>`, { wide: true });
   dfModalBind();
 }
@@ -151,9 +164,7 @@ function dfProfVma(){
 const dfPP = (n, sid) => S.ppil?.[n]?.[sid] || null;
 function dfProfPil(){
   const n = UI.pilL || curLesson();
-  return `<div class="card"><h3>⚙️ Forme de saisie des piliers</h3><p class="muted">Pour l'enseignant et les observateurs (envoyé avec le QR de la leçon).</p>
-      ${DF_PIL.map(p => `<div class="form-row"><span><b>${esc(p.n)}</b></span><div class="choices">${[['on', 'Oui / non'], ['ech', 'Échelle 1 à 10'], ['desc', 'Descriptif moteur']].map(([m, l]) => `<button class="ch ${dfPilMode(p) === m ? 'on' : ''}" data-action="dfPilMode" data-p="${p.id}" data-m="${m}" ${dfPilMode(p) === m ? 'style="background:var(--navy);border-color:var(--navy);color:#fff"' : ''}>${l}</button>`).join('')}</div></div>`).join('')}</div>
-    <div class="card"><div class="lchips"><b>Leçon</b>${Array.from({ length: S.settings.nbLessons }, (_, k) => k + 1).map(l => `<button class="chip ${l === n ? 'on' : ''}" data-action="dfPilL" data-n="${l}">${l}${Object.keys(S.ppil?.[l] || {}).length ? ' ✓' : ''}</button>`).join('')}</div>
+  return `<div class="card"><div class="lchips"><b>Leçon</b>${Array.from({ length: S.settings.nbLessons }, (_, k) => k + 1).map(l => `<button class="chip ${l === n ? 'on' : ''}" data-action="dfPilL" data-n="${l}">${l}${Object.keys(S.ppil?.[l] || {}).length ? ' ✓' : ''}</button>`).join('')}</div>
       <p class="muted">Évaluez quand vous le décidez : touchez un élève. Votre évaluation compte pour 6 pts et sert de référence à la qualité des observations des élèves.</p></div>
     ${groupChips(UI.pilG ?? null, 'dfPilG')}<div class="tiles">${sortedStudents().filter(s => UI.pilG == null || (s.grp || 0) === UI.pilG).map(s => { const m = dfPilMean(dfPP(n, s.id));
       return `<button class="tile ${m != null ? 'done' : ''}" data-action="dfPPopen" data-sid="${s.id}">${band(s.id)}<span class="name">${esc(nameOf(s.id))}</span><span class="meta">${m != null ? Math.round(m * 100) + ' %' : '—'}</span></button>`; }).join('')}</div>`;
@@ -161,10 +172,11 @@ function dfProfPil(){
 function dfPPmodal(sid){
   const n = UI.pilL || curLesson(), o = dfPP(n, sid) || {};
   const obs = []; dfExs(n).forEach((e, i) => Object.values((dfX(n, sid, i) || {}).pil || {}).forEach(p => { const m = dfPilMean(p); if (m != null) obs.push(`${esc(DFX[e.t].ico)} ${Math.round(m * 100)} %${p.by ? ' par ' + esc(nameOf(p.by)) : ''}`); }));
-  const m = modal(`<h2>🎓 ${esc(nameOf(sid))} · leçon ${n}</h2>${obs.length ? `<p class="muted">Observateurs : ${obs.join(' · ')}</p>` : ''}${dfPilForm(o, 'dfPPset', `data-sid="${sid}"`)}
+  const m = modal(`<h2>🎓 ${esc(nameOf(sid))} · leçon ${n}</h2>${obs.length ? `<p class="muted">Observateurs : ${obs.join(' · ')}</p>` : ''}<p class="muted">🎯 Pilier(s) de la leçon ${n} : <b>${esc(dfPilNames(dfLessonPil(n)))}</b>${UI.ppAll ? '' : ' · <button class="btn small ghost" data-allp>Afficher tous les piliers</button>'}</p>${dfPilForm(o, 'dfPPset', `data-sid="${sid}"`, UI.ppAll ? null : dfLessonPil(n))}
     <div class="btn-row spread" style="margin-top:12px"><span class="muted">${dfPilMean(o) != null ? 'Score : ' + Math.round(dfPilMean(o) * 100) + ' %' : ''}</span><div class="btn-row">${dfNextPil(sid)}<button class="btn primary" data-x>Fermer</button></div></div>`, { wide: true });
   m.querySelector('[data-x]').onclick = () => { closeModal(); rerender(); };
   const nx = m.querySelector('[data-nx]'); if (nx) nx.onclick = () => dfPPmodal(nx.dataset.nx);
+  const al = m.querySelector('[data-allp]'); if (al) al.onclick = () => { UI.ppAll = true; dfPPmodal(sid); };
 }
 function dfNextPil(sid){ const L = sortedStudents().filter(s => UI.pilG == null || (s.grp || 0) === UI.pilG), k = L.findIndex(s => s.id === sid), nx = L[k + 1]; return nx ? `<button class="btn" data-nx="${nx.id}">${esc(nameOf(nx.id))} ▶</button>` : ''; }
 
@@ -281,6 +293,10 @@ Object.assign(ACT, {
     if (cur) { if (k >= 0) a.splice(k, 1); } else if (k < 0) a.push(d.sid);
     const r = res(n, d.sid); if (r && r.v.fo != null) setRes(n, d.sid, R => { delete R.v.fo; }); save(); rerender(); },
   dfPL: d => { UI.planL = +d.n; UI.dfComp = null; rerender(); },
+  dfLEv: d => { const L = lesson(+d.n); L.ev = !L.ev; dfSaveP(); },
+  dfLPil: d => { const C = dfEditL(+d.n), a = C.pil && C.pil.length ? [...C.pil] : DF_PIL.map(p => p.id), k = a.indexOf(d.p);
+    if (k >= 0) { if (a.length === 1) return toast('Gardez au moins un pilier'); a.splice(k, 1); } else a.push(d.p);
+    C.pil = DF_PIL.map(p => p.id).filter(id => a.includes(id)); dfSaveP(); },
   dfPM: d => { S.params = S.params || {}; if (S.params.pm !== d.m) { S.params.pm = d.m; S.params.pL = d.m === 'couloir' ? 100 : 250; } dfSaveP(); },
   dfPLen: d => { S.params = S.params || {}; S.params.pL = Math.max(20, Math.min(1000, dfPiste().L + +d.d * (dfPiste().mode === 'couloir' ? 5 : 10))); dfSaveP(); },
   dfPLset: async () => { const v = await numberBox(dfPiste().mode === 'couloir' ? 'Longueur du couloir (m)' : 'Longueur de la piste (m)', dfPiste().L, { step: 1, min: 20, max: 1000, unit: 'm' }); if (v == null) return; S.params.pL = Math.round(v); dfSaveP(); },
@@ -318,7 +334,7 @@ Object.assign(ACT, {
   dfPilMode: d => { S.params = S.params || {}; S.params.pilMode = { ...(S.params.pilMode || {}), [d.p]: d.m }; dfSaveP(); },
   dfPilL: d => { UI.pilL = +d.n; rerender(); },
   dfPilG: d => { UI.pilG = d.g === '' ? null : +d.g; rerender(); },
-  dfPPopen: d => dfPPmodal(d.sid),
+  dfPPopen: d => { UI.ppAll = false; dfPPmodal(d.sid); },
   dfPPset: d => { const n = UI.pilL || curLesson(); S.ppil = S.ppil || {}; const L = S.ppil[n] = S.ppil[n] || {}; L[d.sid] = dfPilApply({ ...(L[d.sid] || {}) }, d); if (!Object.keys(L[d.sid]).length) delete L[d.sid]; save(); dfPPmodal(d.sid); },
   dfBdL: d => { UI.bdL = +d.n; rerender(); },
   dfEvalXls: () => dfEvalXls(),

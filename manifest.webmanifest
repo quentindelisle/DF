@@ -1,5 +1,5 @@
 {
-  "name": "Demi-fond VMA – N'EPS numérique",
+  "name": "Demi-fond N'EPS – N'EPS numérique",
   "short_name": "Demi-fond",
   "description": "CA1 · Demi-fond · performance auto-référencée – Quentin Delisle",
   "lang": "fr",
@@ -8,7 +8,7 @@
   "display": "standalone",
   "orientation": "any",
   "background_color": "#F2F9FE",
-  "theme_color": "#B83A1B",
+  "theme_color": "#0B346E",
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },

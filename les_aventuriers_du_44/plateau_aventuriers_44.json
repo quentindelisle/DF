@@ -1,0 +1,967 @@
+{
+ "width": 1400,
+ "height": 1100,
+ "unit_km": 8.0,
+ "cities": [
+  {
+   "name": "Nantes",
+   "x": 836.7,
+   "y": 673.9,
+   "capital": true
+  },
+  {
+   "name": "Saint-Nazaire",
+   "x": 377.2,
+   "y": 585.4,
+   "capital": false
+  },
+  {
+   "name": "La Baule",
+   "x": 228.0,
+   "y": 646.5,
+   "capital": false
+  },
+  {
+   "name": "Guérande",
+   "x": 200.2,
+   "y": 514.2,
+   "capital": false
+  },
+  {
+   "name": "Pornic",
+   "x": 436.2,
+   "y": 809.2,
+   "capital": false
+  },
+  {
+   "name": "Saint-Brevin",
+   "x": 387.6,
+   "y": 702.4,
+   "capital": false
+  },
+  {
+   "name": "Machecoul",
+   "x": 650.0,
+   "y": 902.8,
+   "capital": false
+  },
+  {
+   "name": "Clisson",
+   "x": 1033.2,
+   "y": 834.7,
+   "capital": false
+  },
+  {
+   "name": "Vallet",
+   "x": 1054.0,
+   "y": 717.7,
+   "capital": false
+  },
+  {
+   "name": "Ancenis",
+   "x": 1097.7,
+   "y": 523.4,
+   "capital": false
+  },
+  {
+   "name": "Châteaubriant",
+   "x": 959.6,
+   "y": 166.3,
+   "capital": false
+  },
+  {
+   "name": "Nort-sur-Erdre",
+   "x": 875.6,
+   "y": 449.1,
+   "capital": false
+  },
+  {
+   "name": "Blain",
+   "x": 691.7,
+   "y": 411.5,
+   "capital": false
+  },
+  {
+   "name": "Savenay",
+   "x": 566.7,
+   "y": 528.5,
+   "capital": false
+  },
+  {
+   "name": "Pontchâteau",
+   "x": 464.7,
+   "y": 450.1,
+   "capital": false
+  },
+  {
+   "name": "Derval",
+   "x": 790.2,
+   "y": 217.2,
+   "capital": false
+  },
+  {
+   "name": "Guémené-Penfao",
+   "x": 630.6,
+   "y": 251.8,
+   "capital": false
+  }
+ ],
+ "routes": [
+  {
+   "id": "La Baule__Guérande",
+   "from": "La Baule",
+   "to": "Guérande",
+   "color": "gris",
+   "segments": 1,
+   "km": 5,
+   "cells": [
+    {
+     "x": 214.1,
+     "y": 580.3,
+     "len": 87.1,
+     "angle": -101.9
+    }
+   ]
+  },
+  {
+   "id": "La Baule__Saint-Nazaire",
+   "from": "La Baule",
+   "to": "Saint-Nazaire",
+   "color": "bleu",
+   "segments": 2,
+   "km": 13,
+   "cells": [
+    {
+     "x": 275.0,
+     "y": 627.2,
+     "len": 53.6,
+     "angle": -22.2
+    },
+    {
+     "x": 330.2,
+     "y": 604.7,
+     "len": 53.6,
+     "angle": -22.2
+    }
+   ]
+  },
+  {
+   "id": "Guérande__Saint-Nazaire",
+   "from": "Guérande",
+   "to": "Saint-Nazaire",
+   "color": "rouge",
+   "segments": 2,
+   "km": 17,
+   "cells": [
+    {
+     "x": 254.2,
+     "y": 535.9,
+     "len": 68.4,
+     "angle": 21.9
+    },
+    {
+     "x": 323.2,
+     "y": 563.7,
+     "len": 68.4,
+     "angle": 21.9
+    }
+   ]
+  },
+  {
+   "id": "Guérande__Pontchâteau",
+   "from": "Guérande",
+   "to": "Pontchâteau",
+   "color": "vert",
+   "segments": 4,
+   "km": 28,
+   "cells": [
+    {
+     "x": 248.6,
+     "y": 502.5,
+     "len": 51.5,
+     "angle": -13.6
+    },
+    {
+     "x": 304.5,
+     "y": 489.0,
+     "len": 51.5,
+     "angle": -13.6
+    },
+    {
+     "x": 360.4,
+     "y": 475.4,
+     "len": 51.5,
+     "angle": -13.6
+    },
+    {
+     "x": 416.3,
+     "y": 461.9,
+     "len": 51.5,
+     "angle": -13.6
+    }
+   ]
+  },
+  {
+   "id": "Saint-Nazaire__Pontchâteau",
+   "from": "Saint-Nazaire",
+   "to": "Pontchâteau",
+   "color": "jaune",
+   "segments": 3,
+   "km": 21,
+   "cells": [
+    {
+     "x": 399.4,
+     "y": 551.1,
+     "len": 33.7,
+     "angle": -57.1
+    },
+    {
+     "x": 421.0,
+     "y": 517.8,
+     "len": 33.7,
+     "angle": -57.1
+    },
+    {
+     "x": 442.5,
+     "y": 484.4,
+     "len": 33.7,
+     "angle": -57.1
+    }
+   ]
+  },
+  {
+   "id": "Saint-Nazaire__Savenay",
+   "from": "Saint-Nazaire",
+   "to": "Savenay",
+   "color": "violet",
+   "segments": 3,
+   "km": 23,
+   "cells": [
+    {
+     "x": 422.2,
+     "y": 571.9,
+     "len": 46.0,
+     "angle": -16.7
+    },
+    {
+     "x": 472.0,
+     "y": 556.9,
+     "len": 46.0,
+     "angle": -16.7
+    },
+    {
+     "x": 521.7,
+     "y": 542.0,
+     "len": 46.0,
+     "angle": -16.7
+    }
+   ]
+  },
+  {
+   "id": "Saint-Nazaire__Saint-Brevin",
+   "from": "Saint-Nazaire",
+   "to": "Saint-Brevin",
+   "color": "gris",
+   "segments": 1,
+   "km": 5,
+   "cells": [
+    {
+     "x": 382.4,
+     "y": 643.9,
+     "len": 69.4,
+     "angle": 84.9
+    }
+   ]
+  },
+  {
+   "id": "Saint-Brevin__Pornic",
+   "from": "Saint-Brevin",
+   "to": "Pornic",
+   "color": "orange",
+   "segments": 2,
+   "km": 15,
+   "cells": [
+    {
+     "x": 404.1,
+     "y": 738.7,
+     "len": 31.7,
+     "angle": 65.5
+    },
+    {
+     "x": 419.7,
+     "y": 773.0,
+     "len": 31.7,
+     "angle": 65.5
+    }
+   ]
+  },
+  {
+   "id": "Pornic__Machecoul",
+   "from": "Pornic",
+   "to": "Machecoul",
+   "color": "bleu",
+   "segments": 3,
+   "km": 25,
+   "cells": [
+    {
+     "x": 484.7,
+     "y": 830.4,
+     "len": 57.8,
+     "angle": 23.6
+    },
+    {
+     "x": 543.1,
+     "y": 856.0,
+     "len": 57.8,
+     "angle": 23.6
+    },
+    {
+     "x": 601.6,
+     "y": 881.6,
+     "len": 57.8,
+     "angle": 23.6
+    }
+   ]
+  },
+  {
+   "id": "Machecoul__Nantes",
+   "from": "Machecoul",
+   "to": "Nantes",
+   "color": "rouge",
+   "segments": 4,
+   "km": 32,
+   "cells": [
+    {
+     "x": 683.3,
+     "y": 862.0,
+     "len": 57.3,
+     "angle": -50.8
+    },
+    {
+     "x": 723.4,
+     "y": 812.9,
+     "len": 57.3,
+     "angle": -50.8
+    },
+    {
+     "x": 763.4,
+     "y": 763.8,
+     "len": 57.3,
+     "angle": -50.8
+    },
+    {
+     "x": 803.4,
+     "y": 714.7,
+     "len": 57.3,
+     "angle": -50.8
+    }
+   ]
+  },
+  {
+   "id": "Machecoul__Clisson",
+   "from": "Machecoul",
+   "to": "Clisson",
+   "color": "jaune",
+   "segments": 5,
+   "km": 42,
+   "cells": [
+    {
+     "x": 704.9,
+     "y": 893.1,
+     "len": 63.4,
+     "angle": -10.1
+    },
+    {
+     "x": 773.2,
+     "y": 880.9,
+     "len": 63.4,
+     "angle": -10.1
+    },
+    {
+     "x": 841.6,
+     "y": 868.7,
+     "len": 63.4,
+     "angle": -10.1
+    },
+    {
+     "x": 910.0,
+     "y": 856.6,
+     "len": 63.4,
+     "angle": -10.1
+    },
+    {
+     "x": 978.3,
+     "y": 844.4,
+     "len": 63.4,
+     "angle": -10.1
+    }
+   ]
+  },
+  {
+   "id": "Nantes__Clisson",
+   "from": "Nantes",
+   "to": "Clisson",
+   "color": "vert",
+   "segments": 3,
+   "km": 25,
+   "cells": [
+    {
+     "x": 880.3,
+     "y": 709.6,
+     "len": 64.6,
+     "angle": 39.3
+    },
+    {
+     "x": 935.0,
+     "y": 754.3,
+     "len": 64.6,
+     "angle": 39.3
+    },
+    {
+     "x": 989.6,
+     "y": 799.0,
+     "len": 64.6,
+     "angle": 39.3
+    }
+   ]
+  },
+  {
+   "id": "Nantes__Vallet",
+   "from": "Nantes",
+   "to": "Vallet",
+   "color": "orange",
+   "segments": 3,
+   "km": 23,
+   "cells": [
+    {
+     "x": 886.7,
+     "y": 684.0,
+     "len": 53.9,
+     "angle": 11.4
+    },
+    {
+     "x": 945.4,
+     "y": 695.8,
+     "len": 53.9,
+     "angle": 11.4
+    },
+    {
+     "x": 1004.1,
+     "y": 707.6,
+     "len": 53.9,
+     "angle": 11.4
+    }
+   ]
+  },
+  {
+   "id": "Clisson__Vallet",
+   "from": "Clisson",
+   "to": "Vallet",
+   "color": "gris",
+   "segments": 1,
+   "km": 8,
+   "cells": [
+    {
+     "x": 1043.6,
+     "y": 776.2,
+     "len": 70.8,
+     "angle": -79.9
+    }
+   ]
+  },
+  {
+   "id": "Vallet__Ancenis",
+   "from": "Vallet",
+   "to": "Ancenis",
+   "color": "violet",
+   "segments": 3,
+   "km": 24,
+   "cells": [
+    {
+     "x": 1064.4,
+     "y": 671.6,
+     "len": 46.4,
+     "angle": -77.3
+    },
+    {
+     "x": 1075.9,
+     "y": 620.5,
+     "len": 46.4,
+     "angle": -77.3
+    },
+    {
+     "x": 1087.4,
+     "y": 569.4,
+     "len": 46.4,
+     "angle": -77.3
+    }
+   ]
+  },
+  {
+   "id": "Nantes__Ancenis",
+   "from": "Nantes",
+   "to": "Ancenis",
+   "color": "bleu",
+   "segments": 4,
+   "km": 33,
+   "cells": [
+    {
+     "x": 883.0,
+     "y": 647.2,
+     "len": 58.8,
+     "angle": -30.0
+    },
+    {
+     "x": 939.2,
+     "y": 614.9,
+     "len": 58.8,
+     "angle": -30.0
+    },
+    {
+     "x": 995.3,
+     "y": 582.5,
+     "len": 58.8,
+     "angle": -30.0
+    },
+    {
+     "x": 1051.5,
+     "y": 550.1,
+     "len": 58.8,
+     "angle": -30.0
+    }
+   ]
+  },
+  {
+   "id": "Nantes__Nort-sur-Erdre",
+   "from": "Nantes",
+   "to": "Nort-sur-Erdre",
+   "color": "jaune",
+   "segments": 3,
+   "km": 25,
+   "cells": [
+    {
+     "x": 845.6,
+     "y": 622.7,
+     "len": 56.0,
+     "angle": -80.2
+    },
+    {
+     "x": 856.2,
+     "y": 561.5,
+     "len": 56.0,
+     "angle": -80.2
+    },
+    {
+     "x": 866.8,
+     "y": 500.4,
+     "len": 56.0,
+     "angle": -80.2
+    }
+   ]
+  },
+  {
+   "id": "Nort-sur-Erdre__Ancenis",
+   "from": "Nort-sur-Erdre",
+   "to": "Ancenis",
+   "color": "rouge",
+   "segments": 3,
+   "km": 25,
+   "cells": [
+    {
+     "x": 925.9,
+     "y": 465.9,
+     "len": 58.1,
+     "angle": 18.5
+    },
+    {
+     "x": 986.7,
+     "y": 486.2,
+     "len": 58.1,
+     "angle": 18.5
+    },
+    {
+     "x": 1047.4,
+     "y": 506.6,
+     "len": 58.1,
+     "angle": 18.5
+    }
+   ]
+  },
+  {
+   "id": "Nort-sur-Erdre__Châteaubriant",
+   "from": "Nort-sur-Erdre",
+   "to": "Châteaubriant",
+   "color": "rose",
+   "segments": 4,
+   "km": 32,
+   "cells": [
+    {
+     "x": 890.6,
+     "y": 398.7,
+     "len": 57.3,
+     "angle": -73.5
+    },
+    {
+     "x": 908.6,
+     "y": 338.0,
+     "len": 57.3,
+     "angle": -73.5
+    },
+    {
+     "x": 926.6,
+     "y": 277.4,
+     "len": 57.3,
+     "angle": -73.5
+    },
+    {
+     "x": 944.6,
+     "y": 216.8,
+     "len": 57.3,
+     "angle": -73.5
+    }
+   ]
+  },
+  {
+   "id": "Ancenis__Châteaubriant",
+   "from": "Ancenis",
+   "to": "Châteaubriant",
+   "color": "vert",
+   "segments": 5,
+   "km": 42,
+   "cells": [
+    {
+     "x": 1077.9,
+     "y": 472.0,
+     "len": 62.2,
+     "angle": -111.2
+    },
+    {
+     "x": 1053.3,
+     "y": 408.4,
+     "len": 62.2,
+     "angle": -111.2
+    },
+    {
+     "x": 1028.7,
+     "y": 344.9,
+     "len": 62.2,
+     "angle": -111.2
+    },
+    {
+     "x": 1004.1,
+     "y": 281.3,
+     "len": 62.2,
+     "angle": -111.2
+    },
+    {
+     "x": 979.5,
+     "y": 217.7,
+     "len": 62.2,
+     "angle": -111.2
+    }
+   ]
+  },
+  {
+   "id": "Châteaubriant__Derval",
+   "from": "Châteaubriant",
+   "to": "Derval",
+   "color": "orange",
+   "segments": 3,
+   "km": 23,
+   "cells": [
+    {
+     "x": 918.0,
+     "y": 178.8,
+     "len": 38.9,
+     "angle": 163.3
+    },
+    {
+     "x": 874.9,
+     "y": 191.8,
+     "len": 38.9,
+     "angle": 163.3
+    },
+    {
+     "x": 831.9,
+     "y": 204.7,
+     "len": 38.9,
+     "angle": 163.3
+    }
+   ]
+  },
+  {
+   "id": "Derval__Blain",
+   "from": "Derval",
+   "to": "Blain",
+   "color": "violet",
+   "segments": 3,
+   "km": 22,
+   "cells": [
+    {
+     "x": 767.5,
+     "y": 262.1,
+     "len": 52.6,
+     "angle": 116.9
+    },
+    {
+     "x": 741.0,
+     "y": 314.3,
+     "len": 52.6,
+     "angle": 116.9
+    },
+    {
+     "x": 714.4,
+     "y": 366.6,
+     "len": 52.6,
+     "angle": 116.9
+    }
+   ]
+  },
+  {
+   "id": "Derval__Nort-sur-Erdre",
+   "from": "Derval",
+   "to": "Nort-sur-Erdre",
+   "color": "gris",
+   "segments": 4,
+   "km": 28,
+   "cells": [
+    {
+     "x": 806.4,
+     "y": 261.0,
+     "len": 45.3,
+     "angle": 69.8
+    },
+    {
+     "x": 824.1,
+     "y": 309.1,
+     "len": 45.3,
+     "angle": 69.8
+    },
+    {
+     "x": 841.8,
+     "y": 357.2,
+     "len": 45.3,
+     "angle": 69.8
+    },
+    {
+     "x": 859.5,
+     "y": 405.3,
+     "len": 45.3,
+     "angle": 69.8
+    }
+   ]
+  },
+  {
+   "id": "Blain__Nort-sur-Erdre",
+   "from": "Blain",
+   "to": "Nort-sur-Erdre",
+   "color": "bleu",
+   "segments": 3,
+   "km": 20,
+   "cells": [
+    {
+     "x": 736.0,
+     "y": 420.6,
+     "len": 42.6,
+     "angle": 11.6
+    },
+    {
+     "x": 783.6,
+     "y": 430.3,
+     "len": 42.6,
+     "angle": 11.6
+    },
+    {
+     "x": 831.2,
+     "y": 440.0,
+     "len": 42.6,
+     "angle": 11.6
+    }
+   ]
+  },
+  {
+   "id": "Blain__Pontchâteau",
+   "from": "Blain",
+   "to": "Pontchâteau",
+   "color": "rouge",
+   "segments": 3,
+   "km": 25,
+   "cells": [
+    {
+     "x": 640.0,
+     "y": 420.3,
+     "len": 56.8,
+     "angle": 170.3
+    },
+    {
+     "x": 578.2,
+     "y": 430.8,
+     "len": 56.8,
+     "angle": 170.3
+    },
+    {
+     "x": 516.3,
+     "y": 441.3,
+     "len": 56.8,
+     "angle": 170.3
+    }
+   ]
+  },
+  {
+   "id": "Blain__Savenay",
+   "from": "Blain",
+   "to": "Savenay",
+   "color": "jaune",
+   "segments": 2,
+   "km": 19,
+   "cells": [
+    {
+     "x": 652.8,
+     "y": 447.9,
+     "len": 58.6,
+     "angle": 136.9
+    },
+    {
+     "x": 605.6,
+     "y": 492.0,
+     "len": 58.6,
+     "angle": 136.9
+    }
+   ]
+  },
+  {
+   "id": "Savenay__Pontchâteau",
+   "from": "Savenay",
+   "to": "Pontchâteau",
+   "color": "rose",
+   "segments": 2,
+   "km": 14,
+   "cells": [
+    {
+     "x": 532.9,
+     "y": 502.5,
+     "len": 37.3,
+     "angle": -142.5
+    },
+    {
+     "x": 498.5,
+     "y": 476.1,
+     "len": 37.3,
+     "angle": -142.5
+    }
+   ]
+  },
+  {
+   "id": "Savenay__Nantes",
+   "from": "Savenay",
+   "to": "Nantes",
+   "color": "vert",
+   "segments": 4,
+   "km": 33,
+   "cells": [
+    {
+     "x": 614.3,
+     "y": 554.1,
+     "len": 60.2,
+     "angle": 28.3
+    },
+    {
+     "x": 672.6,
+     "y": 585.5,
+     "len": 60.2,
+     "angle": 28.3
+    },
+    {
+     "x": 730.9,
+     "y": 616.9,
+     "len": 60.2,
+     "angle": 28.3
+    },
+    {
+     "x": 789.1,
+     "y": 648.3,
+     "len": 60.2,
+     "angle": 28.3
+    }
+   ]
+  },
+  {
+   "id": "Guémené-Penfao__Derval",
+   "from": "Guémené-Penfao",
+   "to": "Derval",
+   "color": "gris",
+   "segments": 2,
+   "km": 14,
+   "cells": [
+    {
+     "x": 680.8,
+     "y": 240.9,
+     "len": 54.7,
+     "angle": -12.2
+    },
+    {
+     "x": 740.1,
+     "y": 228.1,
+     "len": 54.7,
+     "angle": -12.2
+    }
+   ]
+  },
+  {
+   "id": "Guémené-Penfao__Blain",
+   "from": "Guémené-Penfao",
+   "to": "Blain",
+   "color": "orange",
+   "segments": 2,
+   "km": 19,
+   "cells": [
+    {
+     "x": 649.6,
+     "y": 301.5,
+     "len": 58.5,
+     "angle": 69.1
+    },
+    {
+     "x": 672.6,
+     "y": 361.7,
+     "len": 58.5,
+     "angle": 69.1
+    }
+   ]
+  },
+  {
+   "id": "Guémené-Penfao__Pontchâteau",
+   "from": "Guémené-Penfao",
+   "to": "Pontchâteau",
+   "color": "bleu",
+   "segments": 4,
+   "km": 28,
+   "cells": [
+    {
+     "x": 599.7,
+     "y": 288.7,
+     "len": 48.1,
+     "angle": 129.9
+    },
+    {
+     "x": 565.0,
+     "y": 330.2,
+     "len": 48.1,
+     "angle": 129.9
+    },
+    {
+     "x": 530.3,
+     "y": 371.7,
+     "len": 48.1,
+     "angle": 129.9
+    },
+    {
+     "x": 495.5,
+     "y": 413.3,
+     "len": 48.1,
+     "angle": 129.9
+    }
+   ]
+  }
+ ]
+}

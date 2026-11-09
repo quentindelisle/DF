@@ -66,14 +66,14 @@ function dfAvMap(n, i, e, t, opts = {}){
   const rings = [...tkC].map(c => { const C = DF_CITY[c]; return C ? `<circle cx="${C.x}" cy="${C.y}" r="30" fill="none" stroke="${col}" stroke-width="8" stroke-dasharray="${a.parcours.some(p => p.done && (p.a === c || p.b === c)) ? '0' : '12 7'}"/>` : ''; }).join('');
   return `<div class="df-map"><svg viewBox="0 0 ${DF_PLATEAU.w} ${DF_PLATEAU.h}"><image href="aventuriers/plateau.jpg" x="0" y="0" width="${DF_PLATEAU.w}" height="${DF_PLATEAU.h}"/>${rings}${routes}</svg></div>`;
 }
-function dfAvPhase(n, i, e){ const T = dfTimer(`a${n}-${i}`); if (!T.run && !T.acc) return 'libre'; const st = dfTimerState({ ...T, phases: [{ n:'Organisation', s: e.orga * 60 }, { n:'Jeu', s: e.dur * 60 }] }); return st.k === 0 ? 'orga' : st.k === 1 ? 'jeu' : 'fin'; }
+function dfAvPhase(n, i, e){ const T = dfTimer(`a${n}-${i}`); if (!T.run && !T.acc) return 'libre'; const st = dfTimerState({ ...T, phases: [{ n:'Jeu', s: e.dur * 60 }] }); return st.k === 0 ? 'jeu' : 'fin'; }
 function dfAventuriersView(n, i, e){
   const teams = dfTeams(n, i, e), nb = Math.max(1, ...Object.values(teams).map(t => t + 1)), tab = dfMyTab(e);
   const mine = Array.from({ length: nb }, (_, t) => t).filter(t => t % (e.tabs || 1) === tab && sortedStudents().some(s => teams[s.id] === t));
   const t = mine.includes(UI.dfTeam) ? UI.dfTeam : mine[0]; if (t == null) return `${dfTabChips(e)}<div class="card">Aucune équipe sur cette tablette.</div>`;
   const a = dfAvTeam(n, i, e, t), run = UI.dfRun && a.members.some(s => s.id === UI.dfRun) ? UI.dfRun : null, ph = dfAvPhase(n, i, e);
   const pDist = sid => ((dfX(n, sid, i) || {}).buys || []).reduce((s, b) => s + (DF_ROUTES[b.r] || {}).segments, 0) * dfLap();
-  return `${dfTabChips(e)}${dfTimerHTML(`a${n}-${i}`, [{ n:'Organisation', s: e.orga * 60 }, { n:'Jeu', s: e.dur * 60 }])}
+  return `${dfTabChips(e)}${dfTimerHTML(`a${n}-${i}`, [{ n:'Les Aventuriers du 44', s: e.dur * 60 }])}
     <div class="filters"><b>Équipe :</b>${mine.map(q => `<button class="chip ${q === t ? 'on' : ''}" data-action="dfTeam" data-t="${q}"><span class="dot" style="background:${dfTeamCol(q).c}"></span>${esc(dfTeamName(e, q))}</button>`).join('')}</div>
     <div class="df-av"><div class="df-av-side">
       <div class="card"><h3>1. Qui a couru ?</h3><div class="choices">${a.members.map(s => `<button class="ch ${run === s.id ? 'on' : ''}" data-action="dfRun" data-sid="${s.id}" ${run === s.id ? `style="background:${dfTeamCol(t).c};border-color:${dfTeamCol(t).c};color:#fff"` : ''}>${esc(nameOf(s.id))}<small>${dfKm(pDist(s.id))}</small></button>`).join('')}</div>
@@ -81,7 +81,7 @@ function dfAventuriersView(n, i, e){
         <button class="btn small ghost" data-action="dfBuyUndo" data-t="${t}" data-i="${i}" ${a.buys.length ? '' : 'disabled'}>↩ Annuler le dernier trajet</button></div>
       <div class="card"><h3>🎫 Nos parcours</h3>${a.parcours.map(p => `<div class="df-tk ${p.done ? 'ok' : ''}"><b>${esc(p.a)} → ${esc(p.b)}</b><span>${p.pts} pts ${p.done ? '✓' : ''}</span></div>`).join('')}</div>
       <div class="card df-avsc"><b>${a.trajets}</b> pts trajets · <b>${a.parcPts}</b> pts parcours · ${a.cities} villes · ${a.laps} tours (${dfKm(a.laps * dfLap())})</div>
-      ${ph === 'orga' ? '<div class="card warn-card"><b>⏳ Organisation :</b> lisez vos parcours, choisissez vos trajets et l\'ordre des relais.</div>' : ph === 'fin' ? '<div class="card warn-card"><b>🏁 Partie terminée</b> : comptez les points (Espace enseignant → Bilan).</div>' : ''}
+      ${ph === 'fin' ? '<div class="card warn-card"><b>🏁 Partie terminée</b> : comptez les points (Espace enseignant → Bilan).</div>' : ''}
     </div>${dfAvMap(n, i, e, t, { click: true })}</div>
     <details class="card"><summary><b>🏆 Classement provisoire (saisies de cette tablette)</b></summary>${dfAvTable(n, i, e)}</details>`;
 }
@@ -101,7 +101,6 @@ Object.assign(ACT, {
   dfBuy: async d => {
     const n = curLesson(), i = +d.i, e = dfEx(n, i), t = +d.t, r = DF_ROUTES[+d.r], a = dfAvTeam(n, i, e, t), ph = dfAvPhase(n, i, e);
     if (a.owned.has(+d.r)) return toast('Trajet déjà acheté par votre équipe');
-    if (ph === 'orga') return toast('⏳ Attendez la fin du temps d\'organisation');
     if (ph === 'fin' && !(isProf() && UI.profUnlocked)) return toast('🏁 La partie est terminée');
     if (!UI.dfRun) return toast('Choisissez d\'abord le coureur');
     if (!(await confirmBox(`${esc(r.a)} → ${esc(r.b)}`, `${esc(nameOf(UI.dfRun))} a couru <b>${r.segments} tour${r.segments > 1 ? 's' : ''}</b> (${r.segments * dfLap()} m) ? Trajet de ${r.segments} tronçon(s) : ${DF_TTR[r.segments] || r.segments} pts.`, 'Valider le trajet'))) return;

@@ -42,7 +42,7 @@ profAppel = () => { const n = curLesson();
    PROGRAMMATION DU CYCLE
    ===================================================================== */
 const DF_SCHEMA = {
-  aventuriers:[ { k:'dur', l:'Durée du jeu', u:'min', min:10, max:60, st:5 }, { k:'orga', l:'Temps d\'organisation', u:'min', min:0, max:10, st:1 },
+  aventuriers:[ { k:'dur', l:'Durée du jeu', u:'min', min:10, max:60, st:5 },
     { k:'taille', l:'Équipes', opts:[[2, 'Binômes'], [3, 'Trinômes']] }, { k:'nbParc', l:'Parcours par équipe', u:'', min:1, max:5, st:1 },
     { k:'coefTri', l:'Coefficient des trinômes (s\'il reste des binômes)', u:'', min:0.5, max:1, st:0.05 }, { k:'tabs', l:'Tablettes pour la saisie', u:'', min:1, max:8, st:1 },
     { k:'form', l:'Constitution des équipes', opts:[['libre', 'Libre (à la main)'], ['alea', 'Aléatoire'], ['proche', 'VMA proches'], ['equi', 'VMA équilibrées']] },

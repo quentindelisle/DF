@@ -1,6 +1,6 @@
 # Demi-fond N'EPS
 
-CA1 · Demi-fond · performance auto-référencée · Quentin Delisle · socle N'EPS 1.3.0 · **v2.0.1**
+CA1 · Demi-fond · performance auto-référencée · Quentin Delisle · socle N'EPS 1.3.0 · **v2.0.3**
 
 ## Fichiers
 
@@ -18,7 +18,7 @@ CA1 · Demi-fond · performance auto-référencée · Quentin Delisle · socle N
 
 ## Piste
 
-Espace enseignant → 🗺️ Programmation du cycle → **Ma piste** : piste circulaire (1 tour = longueur) ou couloir en aller-retour (1 tour = 2 × longueur).
+Espace enseignant → ⚙️ **Paramètres du cycle** (tout le cycle : nombre de leçons, piste, forme de saisie des piliers, jokers) · 🗺️ **Programmation des leçons** (chaque leçon : exercices et réglages, équipes, parcours, pilier(s) observé(s), leçon d'évaluation). Piste : piste circulaire (1 tour = longueur) ou couloir en aller-retour (1 tour = 2 × longueur).
 Tour impossible au-delà de 26 km/h. Demi-Cooper : un plot tous les ≈ 50 m, numérotés en continu ; on ne compte pas les tours sur la tablette, on place chaque élève sur la case de son plot d'arrêt (8 à 40 ; plot n = n ÷ 2 km/h avec 50 m).
 
 ## Cycle par défaut (1 à 4 exercices par leçon, modifiable)

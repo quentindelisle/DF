@@ -43,7 +43,7 @@ const DF_FORMES = {
 function dfxDefault(t){
   const b = { t };
   if (DF_TEST(t)) return { ...b, dur:360 };
-  if (t === 'aventuriers') return { ...b, dur:30, orga:3, taille:2, form:'alea', attr:'alea', nbParc:3, coefTri:0.9, tabs:2 };
+  if (t === 'aventuriers') return { ...b, dur:30, taille:2, form:'alea', attr:'alea', nbParc:3, coefTri:0.9, tabs:2 };
   if (t === 'equipe') return { ...b, dur:12, nbEq:4, form:'equi', tabs:1, pauses:false };
   if (t === 'pelotons') return { ...b, d:500, nb:3, ns:3, rec:5 };
   if (t === 'eval') return { ...b, d:500, nb:3, rec:10 };
@@ -54,18 +54,18 @@ const dfClone = o => JSON.parse(JSON.stringify(o));
 
 /* ---------- Cycle par défaut (8 leçons) ---------- */
 const DF_DEF = {
-  1:{ title:'Test VMA et course d\'équipe', ex:['cooper', 'equipe'] },
-  2:{ title:'Fractionné court et Aventuriers du 44', ex:['fc', 'aventuriers'] },
-  3:{ title:'Bats tes perfs et pelotons', ex:['bats', 'pelotons'] },
-  4:{ title:'Fractionné long et Aventuriers du 44', ex:['fl', 'aventuriers'] },
-  5:{ title:'Pyramide et course d\'équipe', ex:[['fc', 4], 'equipe'] },
-  6:{ title:'Fractionné long et pelotons', ex:[['fl', 1], 'pelotons'] },
-  7:{ title:'Préparer l\'évaluation', ex:[['fc', 3], 'pelotons'] },
-  8:{ title:'Évaluation 3 × 500 m', ex:['eval'] },
+  1:{ title:'Test VMA et course d\'équipe', ex:['cooper', 'equipe'], pil:['effort'] },
+  2:{ title:'Fractionné court et Aventuriers du 44', ex:['fc', 'aventuriers'], pil:['foulee'] },
+  3:{ title:'Bats tes perfs et pelotons', ex:['bats', 'pelotons'], pil:['effort'] },
+  4:{ title:'Fractionné long et Aventuriers du 44', ex:['fl', 'aventuriers'], pil:['posture'] },
+  5:{ title:'Pyramide et course d\'équipe', ex:[['fc', 4], 'equipe'], pil:['bras'] },
+  6:{ title:'Fractionné long et pelotons', ex:[['fl', 1], 'pelotons'], pil:['regard'] },
+  7:{ title:'Préparer l\'évaluation', ex:[['fc', 3], 'pelotons'], pil:['effort'] },
+  8:{ title:'Évaluation 3 × 500 m', ex:['eval'], pil:['foulee', 'posture', 'bras', 'regard', 'effort'] },
 };
 function dfDefLesson(n){
   const D = DF_DEF[n] || { title:'', ex:['fc'] };
-  return { title: D.title, ex: D.ex.map(e => { const [t, f] = Array.isArray(e) ? e : [e, null]; const x = dfxDefault(t);
+  return { title: D.title, pil: D.pil ? [...D.pil] : DF_PIL.map(p => p.id), ex: D.ex.map(e => { const [t, f] = Array.isArray(e) ? e : [e, null]; const x = dfxDefault(t);
     if (f != null && DF_FRAC(t)) Object.assign(x, dfClone(DF_FORMES[t][f]), { forme: DF_FORMES[t][f].n }); return x; }) };
 }
 const DF_DEFC = {};
@@ -177,9 +177,12 @@ function dfPilScore(p, v){
 }
 function dfPilMean(o){ if (!o) return null; const a = vals(DF_PIL.map(p => dfPilScore(p, o[p.id]))); return a.length ? avg(a) : null; }
 /* formulaire d'un pilier (data-action = action ; attrs = data-… communs) */
-function dfPilForm(o, action, attrs){
+/* piliers observés pendant la leçon n (réglés dans la Programmation des leçons) */
+function dfLessonPil(n){ const a = dfCyc(n).pil; return a && a.length ? a : DF_PIL.map(p => p.id); }
+const dfPilNames = ids => ids.map(id => (DF_PIL.find(p => p.id === id) || {}).n).filter(Boolean).join(', ');
+function dfPilForm(o, action, attrs, ids){
   o = o || {};
-  return DF_PIL.map(p => { const m = dfPilMode(p), v = o[p.id];
+  return DF_PIL.filter(p => !ids || ids.includes(p.id)).map(p => { const m = dfPilMode(p), v = o[p.id];
     let ctl = '';
     if (m === 'on') ctl = p.crit.map((c, k) => { const x = Array.isArray(v) ? v[k] : null;
       return `<div class="crit-row"><span class="crit-c">${esc(c)}</span><button class="cr-b ok ${x === 1 ? 'on' : ''}" data-action="${action}" ${attrs} data-p="${p.id}" data-k="${k}" data-v="1">✓</button><button class="cr-b ko ${x === 0 ? 'on' : ''}" data-action="${action}" ${attrs} data-p="${p.id}" data-k="${k}" data-v="0">✗</button></div>`; }).join('');
@@ -290,7 +293,7 @@ render = function(){
     stopScan(); const n = curLesson(), i = UI.ex, e = dfEx(n, i);
     if (!e) { UI.view = 'saisie'; return _dfRender(); }
     setTop(`${DFX[e.t].ico} ${DFX[e.t].n}`, `${className()} · Leçon ${n} · exercice ${i + 1}`, `<button class="btn small" data-action="go" data-view="saisie">▦ Leçon</button>`);
-    const V = DF_VIEWS[e.t]; $('#main').innerHTML = `<div class="df-exhead card"><div><b>${esc(dfExSummary(e))}</b></div><button class="btn small" data-action="dfFiche" data-t="${e.t}" data-n="${n}" data-i="${i}">📖 Fiche</button></div>` + (V ? V.view(n, i, e) : '');
+    const V = DF_VIEWS[e.t]; $('#main').innerHTML = `<div class="df-exhead card"><div><b>${esc(dfExSummary(e))}</b>${DF_FRAC(e.t) || e.t === 'eval' ? `<br><span class="df-pilfocus">🎯 Pilier${dfLessonPil(n).length > 1 ? 's' : ''} observé${dfLessonPil(n).length > 1 ? 's' : ''} : ${esc(dfPilNames(dfLessonPil(n)))}</span>` : ''}</div><button class="btn small" data-action="dfFiche" data-t="${e.t}" data-n="${n}" data-i="${i}">📖 Fiche</button></div>` + (V ? V.view(n, i, e) : '');
     if (V && V.bind) V.bind(n, i, e); return;
   }
   _dfRender();
@@ -299,7 +302,7 @@ render = function(){
 const _dfViewSaisie = viewSaisie;
 viewSaisie = function(){
   const n = curLesson(), E = dfExs(n);
-  return `<div class="card strong"><h3 style="margin:0 0 8px">${esc(lessonLabel(n))}</h3><div class="df-exgrid">${E.map((e, i) => `<button class="df-exbtn" style="--xc:${DFX[e.t].c}" data-action="dfOpen" data-i="${i}">
+  return `<div class="card strong"><h3 style="margin:0 0 8px">${esc(lessonLabel(n))}</h3><p class="df-pilfocus">🎯 Pilier${dfLessonPil(n).length > 1 ? 's' : ''} de la leçon : ${esc(dfPilNames(dfLessonPil(n)))}</p><div class="df-exgrid">${E.map((e, i) => `<button class="df-exbtn" style="--xc:${DFX[e.t].c}" data-action="dfOpen" data-i="${i}">
       <span class="ico">${DFX[e.t].ico}</span><b>${i + 1}. ${esc(DFX[e.t].n)}</b><small>${esc(dfExSummary(e))}</small></button>`).join('') || '<p class="muted">Aucun exercice programmé.</p>'}</div></div>
     <h3 class="df-sub">👤 Fiches élèves <small class="muted">(abandons, méthode, observateur)</small></h3>` + _dfViewSaisie();
 };

@@ -23,7 +23,7 @@ const DF_FICHES = {
   aventuriers:{
     but:'Relier des villes de Loire-Atlantique en courant en relais : chaque trajet du plateau coûte autant de tours de piste que de tronçons.',
     mat:['Plateau sur chaque tablette (une tablette pour quelques équipes)', 'Piste ou couloir balisé', 'Chasubles de couleur (facultatif)'],
-    deroul:['Équipes de 2 (ou 3) ; chaque équipe reçoit 3 parcours (2 villes à relier). Plus les villes sont éloignées, plus le parcours rapporte.', 'Temps d\'organisation : lire ses parcours, choisir les trajets, l\'ordre des relais.', 'Jeu (30 min) : un coureur de l\'équipe s\'élance pour X tours ; au retour il « achète » un trajet de X tronçons : il choisit son nom puis touche le trajet sur la carte de l\'équipe.', 'Un seul coureur de l\'équipe en course à la fois ; les autres récupèrent.', 'Fin : points des trajets (1 tronçon = 1 pt, 2 = 2, 3 = 4, 4 = 7, 5 = 10) + valeur des parcours reliés + 10 pts à l\'équipe qui a traversé le plus de villes + 10 pts à l\'équipe qui a relié le plus de parcours (égalité : la première arrivée).'],
+    deroul:['Équipes de 2 (ou 3) ; chaque équipe reçoit 3 parcours (2 villes à relier). Plus les villes sont éloignées, plus le parcours rapporte.', 'Jeu (30 min) : un coureur de l\'équipe s\'élance pour X tours ; au retour il « achète » un trajet de X tronçons : il choisit son nom puis touche le trajet sur la carte de l\'équipe.', 'Un seul coureur de l\'équipe en course à la fois ; les autres récupèrent.', 'Fin : points des trajets (1 tronçon = 1 pt, 2 = 2, 3 = 4, 4 = 7, 5 = 10) + valeur des parcours reliés + 10 pts à l\'équipe qui a traversé le plus de villes + 10 pts à l\'équipe qui a relié le plus de parcours (égalité : la première arrivée).'],
     roles:['Coureur', 'Stratège de l\'équipe (choix des trajets)', 'Secrétaire : saisit les trajets sur la tablette'],
     reussite:['Courir des relais réguliers, sans s\'épuiser au premier passage', 'Choisir des trajets utiles aux parcours'],
     secu:['Zone de relais hors de la piste', 'Pas de course à contresens'],
@@ -89,20 +89,36 @@ function dfFiche(t, n, i){
    ===================================================================== */
 const _dfMakeDemo = makeDemoClass;
 makeDemoClass = function(){
-  _dfMakeDemo(); const lap = dfLap(), V = {}; S.students.forEach(s => V[s.id] = (s.sx === 'F' ? 10.5 : 12) + Math.random() * 4);
-  const rnd_ = (a, b) => a + Math.random() * (b - a), last = curLesson() - 1;
-  for (let l = 1; l <= last; l++) { S.results[l] = S.results[l] || {};
-    dfExs(l).forEach((e, i) => S.students.forEach((s, k) => { const r = S.results[l][s.id]; if (!r) return; r.v.x = r.v.x || {}; const vma = V[s.id] + (l > 2 ? 0.6 : 0);
-      const mate = S.students.find(o => o.id !== s.id && o.grp === s.grp && ((S.students.indexOf(o) + 1) % S.students.length) !== k) || S.students[(k + 1) % S.students.length];
-      const pil = () => ({ by: mate.id, ...Object.fromEntries(DF_PIL.map(p => [p.id, p.desc[Math.min(p.desc.length - 1, Math.floor(Math.random() * p.desc.length))].v])) });
-      if (DF_TEST(e.t)) { const k = Math.max(8, Math.min(40, Math.round(vma * 100 / dfPlotStep()))); r.v.x[i] = { pn: k, ts: now() }; if (e.t === 'cooper') V[s.id] = k * dfPlotStep() / 100; }
-      else if (e.t === 'equipe') { const n = Math.round(e.dur * 60 * vma * 0.75 / 3.6 / lap); let t = 0; r.v.x[i] = { laps: Array.from({ length: n }, () => r10(t += lap / (vma * rnd_(0.7, 0.85) / 3.6), 1)), ts: now() }; }
-      else if (e.t === 'aventuriers') { const R = DF_ROUTES.map((x, q) => q).filter(q => q % S.students.length === k || (q + 7) % S.students.length === k).slice(0, 3); r.v.x[i] = { buys: R.map((q, z) => ({ r: q, ts: now() - 1e6 + k * 1000 + z * 60000 })), ts: now() }; }
-      else if (e.t === 'pelotons') r.v.x[i] = { c: Array.from({ length: e.nb }, (_, q) => { const J = dfJoks()[(k + q) % dfJoks().length]; return { t: r10(dfTime(e.d, vma, rnd_(108, 128)), 2), j: J.id, ok: Math.random() < 0.55, nd: J.p === 'n' ? 2 : 0 }; }), ts: now() };
-      else if (DF_FRAC(e.t)) r.v.x[i] = { r: Array.from({ length: e.series }, () => dfReps(e).map(() => [2, 2, 2, 1, 0][Math.floor(Math.random() * 5)])), pil: { fin: pil() }, ts: now() };
-      else if (e.t === 'eval') { const b = dfTime(e.d, vma, rnd_(98, 110)); r.v.x[i] = { c: [0, 1, 2].map(() => ({ t: r10(b + rnd_(-4, 6), 2) })), pil: { fin: pil() }, ts: now() }; }
-      if (k % 11 === 7 && l === last && i === 0) r.v.x[i].ab = true; })); }
-  save();
+  _dfMakeDemo();
+  const nbL = S.settings.nbLessons, lap = dfLap(), rnd_ = (a, b) => a + Math.random() * (b - a), pick = a => a[Math.floor(Math.random() * a.length)];
+  const lvl = {}, V = {}, G = {}; S.students.forEach(s => { lvl[s.id] = Math.random(); V[s.id] = (s.sx === 'F' ? 10 : 11.5) + lvl[s.id] * 5; G[s.id] = rnd_(-0.4, 2.8); });
+  S.results = {}; S.notes = {}; S.ppil = {}; S.settings.current = nbL;
+  const pilObj = (l, sid, by, q) => ({ by, ...Object.fromEntries(DF_PIL.filter(p => dfLessonPil(l).includes(p.id)).map(p => { const m = dfPilMode(p);
+    if (m === 'on') return [p.id, p.crit.map(() => Math.random() < q + 0.15 ? 1 : 0)]; if (m === 'ech') return [p.id, Math.max(1, Math.min(10, Math.round(2 + q * 8 + rnd_(-1.5, 1.5))))];
+    const D = [...p.desc].sort((x, y) => x.v - y.v); return [p.id, D[Math.max(0, Math.min(D.length - 1, Math.round(q * (D.length - 1) + rnd_(-0.6, 0.6))))].v]; })) });
+  for (let l = 1; l <= nbL; l++) {
+    const L = lesson(l); L.att = {}; S.results[l] = {};
+    S.students.forEach((s, k) => { if ((k * 7 + l * 3) % 23 === 0) L.att[s.id] = pick([1, 1, 2]); });
+    const pres = S.students.filter(s => !isOff(attOf(l, s.id)));
+    pres.forEach((s, k) => { const mate = pres[(k + 1) % pres.length], q = Math.min(1, Math.max(0, lvl[s.id] * 0.6 + l * 0.04 + rnd_(-0.15, 0.15)));
+      const vma = V[s.id] + (l >= 3 ? G[s.id] * (l >= 6 ? 1 : 0.7) : 0), x = {};
+      dfExs(l).forEach((e, i) => { let o;
+        if (DF_TEST(e.t)) { const v = e.t === 'bats' ? V[s.id] + G[s.id] : V[s.id]; o = { pn: Math.max(8, Math.min(40, Math.round(v * 100 / dfPlotStep()))) }; }
+        else if (e.t === 'equipe') { const n = Math.round(e.dur * 60 * vma * rnd_(0.65, 0.82) / 3.6 / lap); let t = 0; o = { laps: Array.from({ length: n }, () => r10(t += lap / (vma * rnd_(0.68, 0.86) / 3.6), 1)) }; if (e.pauses && k % 4 === 0) o.pz = [[r10(t / 2, 1), r10(t / 2 + 40, 1)]]; }
+        else if (e.t === 'aventuriers') { const R = DF_ROUTES.map((_, q) => q).filter(q => (q + k) % 9 < 3).slice(0, 2 + (k % 3)); o = { buys: R.map((q, z) => ({ r: q, ts: now() - 2e6 + k * 3000 + z * 90000 })) }; }
+        else if (e.t === 'pelotons') o = { c: Array.from({ length: e.nb }, (_, c) => { const J = dfJoks()[(k + c + l) % dfJoks().length]; return { t: r10(dfTime(e.d, vma, rnd_(102, 128) + q * 8), 2), j: J.id, ok: Math.random() < 0.4 + q * 0.4, nd: J.p === 'n' ? 1 + (k % 3) : 0 }; }) };
+        else if (DF_FRAC(e.t)) { const ok = 0.45 + q * 0.5; o = { r: Array.from({ length: e.series || 1 }, () => dfReps(e).map(() => { const z = Math.random(); return z < ok ? 2 : z < ok + 0.2 ? 1 : 0; })), pil: { fin: pilObj(l, s.id, mate.id, q) } }; }
+        else if (e.t === 'eval') { const b = dfTime(e.d, vma, rnd_(97, 108) + q * 4); o = { c: [0, 1, 2].map(() => ({ t: r10(b + rnd_(-3, 5) * (1.2 - q), 2) })), pil: { fin: pilObj(l, s.id, mate.id, q) } }; }
+        if (o) { if (k % 13 === 5 && l === 5 && i === 0) o.ab = true; o.ts = now(); x[i] = o; } });
+      const v = { x, met: Math.max(1, Math.min(4, Math.round(1 + q * 3 + rnd_(-0.5, 0.5)))) };
+      if (k % 6 === 2 && DF_FRAC((dfExs(l)[0] || {}).t)) v.fo = true;
+      if (CFG.evalObs) v._obs = { by: mate.id, lv: Math.max(1, Math.min(4, Math.round(2 + q * 2 + rnd_(-0.6, 0.6)))) };
+      S.results[l][s.id] = { v, ts: now(), d: 'demo' };
+      if (l === 4 || l === nbL) { const P = pilObj(l, s.id, null, Math.min(1, q + rnd_(-0.1, 0.1))); delete P.by; (S.ppil[l] = S.ppil[l] || {})[s.id] = P; }
+    });
+    if (l === 2) S.notes[2] = { [pres[0].id]: 'Part trop vite sur les 30/30', [pres[3].id]: 'Très bon investissement' };
+  }
+  save(); toast('🧪 Classe de démonstration : cycle complet de ' + nbL + ' leçons', 3500);
 };
 
 /* ---------- Styles propres à l'appli ---------- */
@@ -163,3 +179,11 @@ tr.abd{opacity:.5}
 .df-sv{min-width:90px;text-align:center}
 .up{color:#1E8E3E}.down{color:#D0161B}
 </style>`);
+ACT.demoClass = async () => { if (!(await confirmBox('Créer la classe de démonstration ?', '18 élèves fictifs avec un cycle complet (8 leçons, tous les exercices, évaluation, piliers de l\'enseignant). Vos classes ne sont pas modifiées.', 'Créer'))) return; makeDemoClass(); go('prof', { profTab:'menu' }); };
+
+/* Classe de démonstration : dans « Classe & élèves » (et plus dans Export & sauvegarde) */
+const _dfProfExport = profExport;
+profExport = () => _dfProfExport().replace(/<div class="card"><h3>🧪 Classe de démonstration<\/h3>[\s\S]*?<\/button><\/div>/, '');
+const _dfProfClasse = profClasse;
+profClasse = () => _dfProfClasse() + `<div class="card"><h3>🧪 Classe de démonstration</h3><p class="muted">Une classe fictive de 18 élèves avec un cycle complet (8 leçons, tous les exercices, évaluation, piliers), pour tester ou présenter l'appli. Elle s'ajoute à vos classes et se supprime comme une classe normale.</p>
+  <button class="btn" data-action="demoClass">🧪 Créer la classe de démonstration</button></div>`;

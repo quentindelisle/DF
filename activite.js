@@ -13,7 +13,7 @@ window.APP_CONFIG = {
   author: 'Quentin Delisle',
   color: '#0B346E',                  // bleu marine de l'icône
   accent: '#F7941D',                 // orange de l'anneau
-  version: '2.0.1',
+  version: '2.0.3',
   url: '',
 
   mode: 'cycle',

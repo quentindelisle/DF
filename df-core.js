@@ -9,9 +9,9 @@
 
 /* ---------- Types d'exercices ---------- */
 const DFX = {
-  cooper:{ n:'Test demi-Cooper', ico:'⏱️', c:'#0B346E' },
+  cooper:{ n:'Test VMA', ico:'⏱️', c:'#0B346E' },
   bats:{ n:'Bats tes perfs', ico:'🔥', c:'#D0161B' },
-  aventuriers:{ n:'Les Aventuriers du 44', ico:'🗺️', c:'#1FA24A' },
+  aventuriers:{ n:'Les Aventuriers du …', ico:'🗺️', c:'#1FA24A' },
   equipe:{ n:'Course d\'équipe', ico:'🤝', c:'#8A2BE2' },
   pelotons:{ n:'Course en pelotons', ico:'🐇', c:'#F7941D' },
   fc:{ n:'Fractionné court', ico:'⚡', c:'#0088E8' },
@@ -42,8 +42,8 @@ const DF_FORMES = {
 };
 function dfxDefault(t){
   const b = { t };
-  if (DF_TEST(t)) return { ...b, dur:360 };
-  if (t === 'aventuriers') return { ...b, dur:30, taille:2, form:'alea', attr:'alea', nbParc:3, coefTri:0.9, tabs:2 };
+  if (DF_TEST(t)) return { ...b, dur:360, proto:'cooper', v0:8 };
+  if (t === 'aventuriers') return { ...b, dur:30, taille:2, form:'alea', attr:'alea', nbParc:3, coefTri:0.9, tabs:2, plat:'loire' };
   if (t === 'equipe') return { ...b, dur:12, nbEq:4, form:'equi', tabs:1, pauses:false };
   if (t === 'pelotons') return { ...b, d:500, nb:3, ns:3, rec:5 };
   if (t === 'eval') return { ...b, d:500, nb:3, rec:10 };
@@ -55,9 +55,9 @@ const dfClone = o => JSON.parse(JSON.stringify(o));
 /* ---------- Cycle par défaut (8 leçons) ---------- */
 const DF_DEF = {
   1:{ title:'Test VMA et course d\'équipe', ex:['cooper', 'equipe'], pil:['effort'] },
-  2:{ title:'Fractionné court et Aventuriers du 44', ex:['fc', 'aventuriers'], pil:['foulee'] },
+  2:{ title:'Fractionné court et Aventuriers du …', ex:['fc', 'aventuriers'], pil:['foulee'] },
   3:{ title:'Bats tes perfs et pelotons', ex:['bats', 'pelotons'], pil:['effort'] },
-  4:{ title:'Fractionné long et Aventuriers du 44', ex:['fl', 'aventuriers'], pil:['posture'] },
+  4:{ title:'Fractionné long et Aventuriers du …', ex:['fl', 'aventuriers'], pil:['posture'] },
   5:{ title:'Pyramide et course d\'équipe', ex:[['fc', 4], 'equipe'], pil:['bras'] },
   6:{ title:'Fractionné long et pelotons', ex:[['fl', 1], 'pelotons'], pil:['regard'] },
   7:{ title:'Préparer l\'évaluation', ex:[['fc', 3], 'pelotons'], pil:['effort'] },
@@ -135,10 +135,21 @@ buildSeance = function(n, ids){
 };
 
 /* ---------- VMA ---------- */
-function dfTestVma(n, sid, i){ const x = dfX(n, sid, i); if (!x || x.ab) return null; const d = dfTestDist(x); return d == null ? null : r10(d / 100, 2); }
+function dfTestVma(n, sid, i){ const x = dfX(n, sid, i); if (!x || x.ab) return null; if (x.vv != null) return x.vv; const d = dfTestDist(x); return d == null ? null : r10(d / 100, 2); }
 /* demi-Cooper : numéro du plot d'arrêt (plots numérotés en continu tous les dfPlotStep() m) */
 function dfTestPn(x){ return x && x.pn != null ? x.pn : null; }
-function dfTestDist(x){ const k = dfTestPn(x); return k == null ? null : k * dfPlotStep(); }
+function dfTestDist(x){ if (x && x.vv != null) return dfVamDist(x.vv, x.v0 || 8); const k = dfTestPn(x); return k == null ? null : k * dfPlotStep(); }
+const dfTestDone = x => !!x && (x.pn != null || x.vv != null);
+/* ---------- VAMEVAL : paliers d'1 min, +0,5 km/h, un bip à chaque plot (≈ 20 m) ---------- */
+const DF_PROTO = {
+  cooper:{ n:'Demi-Cooper', ico:'⏱️', d:'6 minutes de course : on court la plus grande distance possible. VMA = distance ÷ 100.' },
+  vameval:{ n:'VAMEVAL', ico:'📶', d:'Test progressif : la vitesse augmente de 0,5 km/h chaque minute, imposée par des bips (un plot à chaque bip). VMA = vitesse du dernier palier terminé.' },
+};
+const dfProto = e => (e && e.proto === 'vameval') ? 'vameval' : 'cooper';
+const dfVamStep = () => { const P = dfPiste(), base = P.mode === 'couloir' ? P.L : dfLap(); return base / Math.max(1, Math.round(base / 20)); };
+const dfVamV = (k, v0) => (v0 || 8) + 0.5 * k;                                   // vitesse du palier k (0 = premier)
+function dfVamAt(t, v0){ const k = Math.max(0, Math.floor(t / 60)), inP = t - k * 60; let d = 0; for (let j = 0; j < k; j++) d += dfVamV(j, v0) / 3.6 * 60; d += dfVamV(k, v0) / 3.6 * inP; return { k, v: dfVamV(k, v0), inP, d, done: k > 0 ? dfVamV(k - 1, v0) : null }; }
+function dfVamDist(vv, v0){ let d = 0; for (let v = v0 || 8; v <= vv + 0.01; v += 0.5) d += v / 3.6 * 60; return Math.round(d); }
 function dfVmaRef(n, sid, i){
   const man = S.params && S.params.vmaMan && S.params.vmaMan[sid];
   if (man) return { v: +man, src: 'fixée par l\'enseignant' };
@@ -205,7 +216,7 @@ function dfExDist(n, sid, i){
   const e = dfEx(n, i), x = dfX(n, sid, i); if (!e || !x) return null; const lap = dfLap();
   if (DF_TEST(e.t)) return dfTestDist(x);
   if (e.t === 'equipe') return (x.laps || []).length * lap;
-  if (e.t === 'aventuriers') return (x.buys || []).reduce((s, b) => s + ((DF_ROUTES[b.r] || {}).segments || 0), 0) * lap;
+  if (e.t === 'aventuriers') return dfAvSegs(e, x.buys) * dfSegM(e);
   if (e.t === 'pelotons' || e.t === 'eval') return (x.c || []).filter(c => c && c.t).length * e.d;
   if (DF_FRAC(e.t)) { const ref = dfVmaRef(n, sid, i); let d = 0; (x.r || []).forEach(row => (row || []).forEach((v, k) => { if (v != null && v > 0) d += dfRepDist(e, k, ref ? ref.v : null, dfForme(n, sid)) || 0; })); return d; }
   return null;
@@ -228,7 +239,7 @@ calcAll = function(n, sid){
 entryDone = function(n, sid){ const E = dfExs(n); return E.length > 0 && E.every((e, i) => { const x = dfX(n, sid, i); return x && (x.ab || dfExDone(n, sid, i)); }); };
 function dfExDone(n, sid, i){
   const e = dfEx(n, i), x = dfX(n, sid, i); if (!e || !x) return false;
-  if (DF_TEST(e.t)) return dfTestPn(x) != null;
+  if (DF_TEST(e.t)) return dfTestDone(x);
   if (e.t === 'equipe') return (x.laps || []).length > 0;
   if (e.t === 'aventuriers') return (x.buys || []).length > 0;
   if (e.t === 'pelotons' || e.t === 'eval') return (x.c || []).filter(c => c && c.t).length >= e.nb;
@@ -252,8 +263,8 @@ function dfFracSummary(e){
 }
 function dfExSummary(e){
   if (!e) return '';
-  if (DF_TEST(e.t)) return `6 min · plots tous les ${fmtN(dfPlotStep(), 0)} m`;
-  if (e.t === 'aventuriers') return `${e.dur} min · ${e.taille === 3 ? 'trinômes' : 'binômes'} · ${e.nbParc} parcours`;
+  if (DF_TEST(e.t)) return dfProto(e) === 'vameval' ? `VAMEVAL · départ ${fmtN(e.v0 || 8, 1)} km/h, +0,5 km/h par minute · plots tous les ${fmtN(dfVamStep(), 1)} m` : `Demi-Cooper · 6 min · plots tous les ${fmtN(dfPlotStep(), 0)} m`;
+  if (e.t === 'aventuriers') return `${dfBoardName(e)} · ${e.dur} min · ${e.taille === 3 ? 'trinômes' : 'binômes'} · ${e.nbParc} parcours · 1 tronçon = ${dfSegM(e)} m`;
   if (e.t === 'equipe') return `${e.dur} min · ${e.nbEq} équipes · ${e.tabs} tablette(s)`;
   if (e.t === 'pelotons') return `${e.nb} × ${e.d} m · ${e.ns} séries`;
   if (e.t === 'eval') return `${e.nb} × ${e.d} m · récup ${e.rec} min`;
@@ -269,21 +280,25 @@ lesson = function(n){ const L = _dfLesson(n); if (L.tries !== 1) L.tries = 1;
 
 /* ---------- Comptes à rebours partagés (continuent quand on change d'écran) ---------- */
 const DFT = {};
+/* affichage d'un compte à rebours : « 5 min 07 s » (et pas 5:07, lu comme une heure) */
+const dfMS = s => { s = Math.max(0, Math.ceil(s)); const m = Math.floor(s / 60), r = s % 60; return m ? `${m} min ${String(r).padStart(2, '0')} s` : `${r} s`; };
 function dfTimer(key){ return DFT[key] = DFT[key] || { run:false, t0:0, acc:0, phases:null, ended:false }; }
 const dfTNow = T => T.run ? (performance.now() / 1000 - T.t0) + T.acc : T.acc;
 function dfTimerState(T){ let t = dfTNow(T); const P = T.phases || []; for (let k = 0; k < P.length; k++) { if (t < P[k].s) return { k, name: P[k].n, left: P[k].s - t, el: dfTNow(T) }; t -= P[k].s; } return { k: P.length, name: 'Terminé', left: 0, el: dfTNow(T) }; }
 function dfTimerHTML(key, phases, opts = {}){
   const T = dfTimer(key); T.phases = phases; const st = dfTimerState(T);
-  return `<div class="df-timer ${T.run ? 'run' : ''} ${st.left <= 0 ? 'end' : ''}" data-dft="${key}"><div><small data-dft-ph>${esc(st.name)}</small><b data-dft-t>${mmss(st.left)}</b></div>
+  const sty = opts.color && st.left > 0 ? ` style="background:${opts.color}"` : '';
+  return `<div class="df-timer ${T.run ? 'run' : ''} ${st.left <= 0 ? 'end' : ''}" data-dft="${key}"${sty}><div><small data-dft-ph>${esc(st.name)}</small><b data-dft-t>${dfMS(st.left)}</b></div>
     <div class="btn-row">${T.run ? `<button class="btn red" data-action="dfTm" data-key="${key}" data-a="stop">⏸ Pause</button>` : `<button class="btn green" data-action="dfTm" data-key="${key}" data-a="go">▶ ${T.acc ? 'Reprendre' : 'Départ'}</button>`}
     <button class="btn ghost" data-action="dfTm" data-key="${key}" data-a="reset">↺</button>${opts.extra || ''}</div></div>`;
 }
 setInterval(() => {
   Object.entries(DFT).forEach(([key, T]) => { if (!T.run || !T.phases) return;
     const st = dfTimerState(T); if (T._k != null && st.k !== T._k) { beepEnd(); if (st.k >= T.phases.length) { T.run = false; T.acc = dfTNow(T); keepAwake(false); } if (UI.view === 'dfx') rerender(); }
-    T._k = st.k; const c = Math.ceil(st.left); if (T._c !== c && c <= 3 && c > 0) beepShort(); T._c = c;
-    const el = document.querySelector(`[data-dft="${key}"]`); if (el) { const tt = el.querySelector('[data-dft-t]'), ph = el.querySelector('[data-dft-ph]'); if (tt) tt.textContent = mmss(st.left); if (ph) ph.textContent = st.name; } });
-}, 200);
+    T._k = st.k; const c = Math.ceil(st.left); if (!T.quiet && T._c !== c && c <= 3 && c > 0) beepShort(); T._c = c;
+    if (T.onTick) T.onTick(T);
+    const el = document.querySelector(`[data-dft="${key}"]`); if (el) { const tt = el.querySelector('[data-dft-t]'), ph = el.querySelector('[data-dft-ph]'); if (tt) tt.textContent = dfMS(st.left); if (ph) ph.textContent = st.name; } });
+}, 100);
 
 /* ---------- Rendu des écrans d'exercice ---------- */
 const DF_VIEWS = {};      // t → { view(n, i, e), bind?(n, i, e) }
@@ -292,7 +307,7 @@ render = function(){
   if (UI.view === 'dfx' && ROOT.role && S.students.length) {
     stopScan(); const n = curLesson(), i = UI.ex, e = dfEx(n, i);
     if (!e) { UI.view = 'saisie'; return _dfRender(); }
-    setTop(`${DFX[e.t].ico} ${DFX[e.t].n}`, `${className()} · Leçon ${n} · exercice ${i + 1}`, `<button class="btn small" data-action="go" data-view="saisie">▦ Leçon</button>`);
+    setTop(`${DFX[e.t].ico} ${e.t === 'aventuriers' ? dfBoardName(e) : DF_TEST(e.t) ? DFX[e.t].n + ' · ' + DF_PROTO[dfProto(e)].n : DFX[e.t].n}`, `${className()} · Leçon ${n} · exercice ${i + 1}`, `<button class="btn small" data-action="go" data-view="saisie">▦ Leçon</button>`);
     const V = DF_VIEWS[e.t]; $('#main').innerHTML = `<div class="df-exhead card"><div><b>${esc(dfExSummary(e))}</b>${DF_FRAC(e.t) || e.t === 'eval' ? `<br><span class="df-pilfocus">🎯 Pilier${dfLessonPil(n).length > 1 ? 's' : ''} observé${dfLessonPil(n).length > 1 ? 's' : ''} : ${esc(dfPilNames(dfLessonPil(n)))}</span>` : ''}</div><button class="btn small" data-action="dfFiche" data-t="${e.t}" data-n="${n}" data-i="${i}">📖 Fiche</button></div>` + (V ? V.view(n, i, e) : '');
     if (V && V.bind) V.bind(n, i, e); return;
   }

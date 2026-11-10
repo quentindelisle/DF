@@ -1,7 +1,7 @@
 /* Service worker – appli N'EPS (socle N'EPS) – réseau d'abord, cache si hors-ligne.
    À CHAQUE MISE EN LIGNE : changer CACHE (identifiant de l'appli + version), sinon les tablettes gardent l'ancienne version. */
-const CACHE = 'demifond-vma-r4k8-v2.0.3';
-const ASSETS = ['./', './index.html', './activite.js', './socle.js', './outils.js', './df-plateau.js', './df-core.js', './df-exos.js', './df-aventuriers.js', './df-prof.js', './df-fiches.js', './aventuriers/plateau.jpg', './styles.css', './manifest.webmanifest',
+const CACHE = 'demifond-vma-r4k8-v2.1.0';
+const ASSETS = ['./', './index.html', './activite.js', './socle.js', './outils.js', './df-plateau.js', './df-core.js', './df-exos.js', './df-aventuriers.js', './df-prof.js', './df-fiches.js', './aventuriers/plateau_44.jpg', './aventuriers/plateau_france.jpg', './aventuriers/plateau_europe.jpg', './styles.css', './manifest.webmanifest',
   './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png',
   './lib/qrcode.js', './lib/jsQR.js', './lib/zxing-reader.js', './lib/zxing_reader.wasm', './lib/xlsx.full.min.js'];
 self.addEventListener('install', e => {

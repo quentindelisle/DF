@@ -1,6 +1,6 @@
 # Demi-fond N'EPS
 
-CA1 · Demi-fond · performance auto-référencée · Quentin Delisle · socle N'EPS 1.3.0 · **v2.0.3**
+CA1 · Demi-fond · performance auto-référencée · Quentin Delisle · socle N'EPS 1.3.0 · **v2.1.0**
 
 ## Fichiers
 
@@ -8,10 +8,10 @@ CA1 · Demi-fond · performance auto-référencée · Quentin Delisle · socle N
 |---|---|
 | `activite.js` | configuration (synthèse par leçon : VMA, distance, cibles, piliers, abandons, méthode) |
 | `df-core.js` | piste, programmation multi-exercices, VMA de référence, piliers, comptes à rebours, fusion des saisies |
-| `df-exos.js` | écrans : demi-Cooper / Bats tes perfs, course d'équipe, pelotons, fractionnés, évaluation 3 × 500 m |
-| `df-aventuriers.js`, `df-plateau.js`, `aventuriers/plateau.jpg` | Les Aventuriers du 44 |
+| `df-exos.js` | écrans : test VMA (demi-Cooper ou VAMEVAL) / Bats tes perfs, course d'équipe, pelotons, fractionnés, évaluation 3 × 500 m |
+| `df-aventuriers.js`, `df-plateau.js`, `aventuriers/plateau_44.jpg`, `plateau_france.jpg`, `plateau_europe.jpg` | Les Aventuriers du … (plateau au choix : Loire-Atlantique, France, Europe) |
 | `df-prof.js` | espace enseignant : programmation, VMA, piliers enseignant, bilan, évaluation par blocs |
-| `df-fiches.js` | fiches 📖 des exercices, classe de démonstration, styles |
+| `df-fiches.js` | fiches 📖 des exercices (rédigées pour les élèves de seconde), classe de démonstration, styles |
 | le reste | socle N'EPS (inchangé) |
 
 `specifique.js` (v1) n'est plus utilisé : il peut être supprimé du dépôt.
@@ -25,10 +25,10 @@ Tour impossible au-delà de 26 km/h. Demi-Cooper : un plot tous les ≈ 50 m, nu
 
 | Leçon | Exercices |
 |---|---|
-| L1 | ⏱️ Test demi-Cooper + 🤝 Course d'équipe |
-| L2 | ⚡ Fractionné court 30/30 + 🗺️ Aventuriers du 44 |
+| L1 | ⏱️ Test VMA (demi-Cooper) + 🤝 Course d'équipe |
+| L2 | ⚡ Fractionné court 30/30 + 🗺️ Aventuriers du … |
 | L3 | 🔥 Bats tes perfs + 🐇 Course en pelotons |
-| L4 | 🔁 Fractionné long 4 × 3 min + 🗺️ Aventuriers du 44 |
+| L4 | 🔁 Fractionné long 4 × 3 min + 🗺️ Aventuriers du … |
 | L5 | ⚡ Pyramide 15-30-45-30-15 s + 🤝 Course d'équipe |
 | L6 | 🔁 Fractionné long 3 × 1000 m + 🐇 Course en pelotons |
 | L7 | ⚡ 8 × 200 m + 🐇 Course en pelotons |
@@ -38,7 +38,8 @@ Tour impossible au-delà de 26 km/h. Demi-Cooper : un plot tous les ≈ 50 m, nu
 
 - **Bats tes perfs /6** (progrès de VMA) : moins bien → 1 (plus de 1 km/h perdu) ou 2 · même VMA (−0,25 à +0,4) → 3 · +0,5 à 1,4 → 4 · +1,5 à 2,4 → 5 · +2,5 et plus → 6.
 - **Pelotons /10 par course** : % de VMA (135 % et plus = 5, −0,5 par tranche de 5 %) + points du joker validé ; au-delà de 10, report sur la course suivante.
-- **Aventuriers** : trajets 1 → 1 pt, 2 → 2, 3 → 4, 4 → 7, 5 → 10 ; parcours relié = sa valeur (plus court chemin en tronçons) ; +10 plus de villes, +10 plus de parcours (égalité : le premier) ; trinômes × coefficient s'il y a aussi des binômes.
+- **Test VMA** : demi-Cooper (6 min, VMA = distance ÷ 100) ou VAMEVAL (paliers d'1 min, +0,5 km/h, un bip par plot ≈ 20 m ; VMA = dernier palier terminé), au choix dans la Programmation.
+- **Aventuriers** : plateau au choix ; 1 tronçon = distance réglée en mètres (par défaut 1 tour) ; trajets 1 → 1 pt, 2 → 2, 3 → 4, 4 → 7, 5 → 10 ; parcours relié = sa valeur (plus court chemin en tronçons) ; +10 plus de villes, +10 plus de parcours (égalité : le premier) ; trinômes × coefficient s'il y a aussi des binômes.
 - **Évaluation (blocs séparés)** : AFL1 3 × 500 m /12 (3 pts par course selon le % de VMA : 110 % = 3 · 105 = 2,5 · 100 = 2 · 95 = 1,5 · 90 = 1 · 85 = 0,5 ; régularité /3 : −0,5 par tranche de 4 s d'écart entre deux courses) · Bats tes perfs /6 · régularité de l'investissement /2 · qualité de l'investissement /3 · qualité des observations /3 · quantité des observations /2 · piliers élèves /3 · piliers enseignant /6.
 
 ## Déroulement d'une leçon

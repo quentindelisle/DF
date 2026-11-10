@@ -1,7 +1,7 @@
 /* =====================================================================
    ACTIVITÉ — Demi-fond N'EPS (CA1) · performance auto-référencée
    Socle N'EPS 1.3.0 · Quentin Delisle · N'EPS numérique
-   Les exercices (test demi-Cooper, Bats tes perfs, Aventuriers du 44, course d'équipe,
+   Les exercices (test VMA demi-Cooper ou VAMEVAL, Bats tes perfs, Aventuriers du …, course d'équipe,
    course en pelotons, fractionnés, évaluation 3 × 500 m) sont dans df-*.js.
    Les saisies ci-dessous sont la synthèse de chaque leçon, calculée par df-core.js.
    ===================================================================== */
@@ -13,7 +13,7 @@ window.APP_CONFIG = {
   author: 'Quentin Delisle',
   color: '#0B346E',                  // bleu marine de l'icône
   accent: '#F7941D',                 // orange de l'anneau
-  version: '2.0.3',
+  version: '2.1.0',
   url: '',
 
   mode: 'cycle',

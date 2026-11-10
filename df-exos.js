@@ -51,11 +51,12 @@ function dfPlotPos(k){
   const M = Math.round(dfLap() / s), j = k % M; return { cone: j, m: j * s, sens: '' };
 }
 function dfTestView(n, i, e){
+  if (dfProto(e) === 'vameval') return dfVamView(n, i, e);
   const key = `t${n}-${i}`, list = dfGroupList().filter(s => dfPresent(n, s.id)), sel = UI.dfSel || [], st = dfPlotStep();
   let h = `${groupChips(ROOT.grp != null && ROOT.grp < nbGroups() ? ROOT.grp : null)}
     <div class="card df-setup"><b>📐 Mise en place :</b> ${dfPiste().mode === 'couloir' ? `couloir de ${dfPiste().L} m en aller-retour` : `piste de ${dfLap()} m`}, un plot tous les ${fmtN(st, 0)} m, numérotés en continu (plot n = n × ${fmtN(st, 0)} m).
-      <button class="btn small" data-action="dfPlotsGuide">📍 Placement des plots</button></div>
-    ${dfTimerHTML(key, [{ n:'Demi-Cooper · 6 min', s: e.dur || 360 }])}
+      <button class="btn small" data-action="dfPlotsGuide" data-n="${n}" data-i="${i}">📍 Placement des plots</button></div>
+    ${dfTimerHTML(key, [{ n:'Demi-Cooper · temps restant', s: e.dur || 360 }])}
     <p class="muted">Au coup de sifflet, chaque coureur s'arrête et annonce le numéro du dernier plot dépassé. Touchez les tuiles des coureurs arrêtés au même plot, puis le numéro du plot.</p>
     <div class="card df-plotbar ${sel.length ? '' : 'dim'}"><div class="btn-row spread"><b>${sel.length ? sel.length + ' coureur(s) sélectionné(s) → plot d\'arrêt :' : 'Sélectionnez des coureurs, puis le plot'}</b><button class="btn small ghost" data-action="dfSelAll">Tout / rien</button></div>
       <div class="df-pn">${DF_PN.map(k => `<button class="df-pnb" data-action="dfPlot" data-k="${k}" ${sel.length ? '' : 'disabled'}><b>${k}</b><small>${fmtN(k * st / 100, 1)} km/h</small></button>`).join('')}</div></div>`;
@@ -67,10 +68,52 @@ function dfTestView(n, i, e){
     return dfTile(s.id, inner, { cls: `${sel.includes(s.id) ? 'sel' : ''} ${x.ab ? 'abd' : ''}`, attrs: `data-action="dfSel" data-sid="${s.id}" data-i="${i}"` }); }).join('')}</div>`;
   return h;
 }
+/* ---------- VAMEVAL ---------- */
+const DF_VAMN = 30;                                                     // paliers prévus (8 → 22,5 km/h)
+function dfVamTimer(n, i, e){
+  const T = dfTimer(`t${n}-${i}`), v0 = e.v0 || 8, step = dfVamStep();
+  T.quiet = true; T.vam = { v0, step };
+  T.onTick = T_ => { if (!T_.run) return; const p = Math.floor(dfVamAt(dfTNow(T_), v0).d / step); if (T_._pl != null && p > T_._pl) { beepShort(); if (navigator.vibrate) navigator.vibrate(40); } T_._pl = p; };
+  T.onGo = () => { T._pl = Math.floor(dfVamAt(dfTNow(T), v0).d / step); };
+  return Array.from({ length: DF_VAMN }, (_, k) => ({ n: `Palier ${k + 1} · ${fmtN(dfVamV(k, v0), 1)} km/h`, s: 60 }));
+}
+function dfVamView(n, i, e){
+  const key = `t${n}-${i}`, list = dfGroupList().filter(s => dfPresent(n, s.id)), sel = UI.dfSel || [], v0 = e.v0 || 8, step = dfVamStep();
+  const ph = dfVamTimer(n, i, e), T = dfTimer(key), st = dfVamAt(dfTNow(T), v0), started = T.run || T.acc > 0;
+  const speeds = Array.from({ length: 27 }, (_, k) => r10(v0 - 0.5 + 0.5 * k, 1)).filter(v => v >= 6);
+  let h = `${groupChips(ROOT.grp != null && ROOT.grp < nbGroups() ? ROOT.grp : null)}
+    <div class="card df-setup"><b>📐 Mise en place :</b> ${dfPiste().mode === 'couloir' ? `couloir de ${dfPiste().L} m en aller-retour` : `piste de ${dfLap()} m`}, un plot tous les <b>${fmtN(step, 1)} m</b>. Un bip = un plot à atteindre ; double bip = palier suivant (+0,5 km/h).
+      <button class="btn small" data-action="dfPlotsGuide" data-n="${n}" data-i="${i}">📍 Placement des plots</button></div>
+    ${dfTimerHTML(key, ph)}
+    <div class="card df-vamnow"><span>Palier en cours : <b>${st.k + 1}</b> · <b>${fmtN(st.v, 1)} km/h</b> · 1 plot toutes les <b>${fmtN(step / (st.v / 3.6), 1)} s</b></span><span>Dernier palier terminé : <b>${st.done == null ? '—' : fmtN(st.done, 1) + ' km/h'}</b></span></div>
+    <p class="muted">${started ? '⏹ <b>Touchez la tuile d\'un coureur quand il s\'arrête</b> (2 bips manqués de suite = arrêt) : sa VMA = vitesse du dernier palier terminé. Retouchez pour annuler.' : 'Lancez le départ : la tablette donne le rythme. Pour corriger une VMA : touchez les tuiles, puis la vitesse.'}</p>
+    <div class="card df-plotbar ${sel.length ? '' : 'dim'}"><div class="btn-row spread"><b>${sel.length ? sel.length + ' coureur(s) sélectionné(s) → dernier palier terminé :' : 'Correction (chrono en pause) : touchez des coureurs, puis la vitesse'}</b><button class="btn small ghost" data-action="dfSelAll">Tout / rien</button></div>
+      <div class="df-pn">${speeds.map(v => `<button class="df-pnb" data-action="dfVamSet" data-v="${v}" ${sel.length ? '' : 'disabled'}><b>${fmtN(v, 1)}</b><small>km/h</small></button>`).join('')}</div></div>`;
+  h += `<div class="tiles">${list.map(s => { const x = dfX(n, s.id, i) || {}, v = dfTestVma(n, s.id, i);
+    const g = e.t === 'bats' ? dfBatsGain(n, s.id, i) : null, ref = e.t === 'bats' ? dfVmaRef(n, s.id, i) : null;
+    const inner = `<span class="df-big">${x.vv != null ? fmtN(x.vv, 1) : started && !x.ab ? '🏃' : '—'}<small> ${x.vv != null ? 'km/h' : ''}</small></span>
+      <span class="meta">${x.vv != null ? `${fmtN(dfTestDist(x), 0)} m${x.vt ? ' · arrêt à ' + dfT(x.vt) : ''}` : started ? 'en course' : '&nbsp;'}</span>
+      ${e.t === 'bats' ? `<span class="meta">${ref ? `avant : ${fmtN(ref.v, 1)}` : 'pas de VMA avant'}${g != null ? ` · <b class="${g >= 0 ? 'up' : 'down'}">${g >= 0 ? '+' : '−'}${fmtN(Math.abs(g), 1)}</b> · ${dfBatsNote(g)}/6` : ''}</span>` : ''}${dfAbBtn(n, i, s.id)}`;
+    return dfTile(s.id, inner, { cls: `${sel.includes(s.id) ? 'sel' : ''} ${x.ab ? 'abd' : ''} ${x.vv != null ? 'df-stopped' : ''}`, attrs: `data-action="${T.run ? 'dfVamStop' : 'dfSel'}" data-sid="${s.id}" data-i="${i}"` }); }).join('')}</div>`;
+  return h;
+}
+function dfVamGuide(e){
+  const P = dfPiste(), s = dfVamStep(), v0 = e.v0 || 8, nb = P.mode === 'couloir' ? Math.round(P.L / s) + 1 : Math.round(dfLap() / s);
+  const plots = Array.from({ length: nb }, (_, c) => ({ d: c * s }));
+  modal(`<h2>📍 Placement des plots · VAMEVAL</h2>${dfPisteSVG(P.mode, P.L, { plots })}
+    <div class="df-steps"><ol>
+      <li>Un plot tous les <b>${fmtN(s, 1)} m</b> ${P.mode === 'couloir' ? `sur le couloir de ${P.L} m (demi-tour au bout)` : `autour de la piste de ${dfLap()} m`} : ${nb} plots.</li>
+      <li>À chaque <b>bip</b>, le coureur doit être au plot suivant. Double bip : la vitesse augmente de 0,5 km/h (palier d'1 minute).</li>
+      <li>Le coureur s'arrête quand il a <b>2 bips de retard</b> ou ne peut plus suivre : on touche sa tuile. Sa VMA = vitesse du <b>dernier palier terminé</b>.</li></ol></div>
+    <div class="scroll-x"><table class="tbl df-conv"><thead><tr><th>Palier</th><th>Vitesse</th><th>1 plot toutes les</th><th>Distance cumulée</th></tr></thead><tbody>
+      ${Array.from({ length: 22 }, (_, k) => { const v = dfVamV(k, v0); return `<tr><td>${k + 1}</td><td><b>${fmtN(v, 1)} km/h</b></td><td>${fmtN(s / (v / 3.6), 1)} s</td><td>${fmtN(dfVamDist(v, v0), 0)} m</td></tr>`; }).join('')}</tbody></table></div>
+    <div class="btn-row spread no-print" style="margin-top:12px"><button class="btn" data-print>🖨 Imprimer</button><button class="btn primary" data-close>Fermer</button></div>`, { wide: true });
+  dfModalBind();
+}
 DF_VIEWS.cooper = { view: dfTestView };
 DF_VIEWS.bats = { view: dfTestView };
 DF_LINE.cooper = DF_LINE.bats = (n, sid, i, e) => { const x = dfX(n, sid, i); if (!x) return ''; const v = dfTestVma(n, sid, i), g = e.t === 'bats' ? dfBatsGain(n, sid, i) : null, pn = dfTestPn(x);
-  return `<div class="muted">${pn != null ? 'Plot ' + pn + ' · ' + fmtN(dfTestDist(x), 0) + ' m' : '—'} · VMA <b>${v == null ? '—' : fmtN(v, 1) + ' km/h'}</b>${g != null ? ` · progrès ${g >= 0 ? '+' : '−'}${fmtN(Math.abs(g), 1)} km/h · note ${dfBatsNote(g)}/6` : ''}</div>`; };
+  return `<div class="muted">${x.vv != null ? 'VAMEVAL · ' + fmtN(dfTestDist(x), 0) + ' m' : pn != null ? 'Plot ' + pn + ' · ' + fmtN(dfTestDist(x), 0) + ' m' : '—'} · VMA <b>${v == null ? '—' : fmtN(v, 1) + ' km/h'}</b>${g != null ? ` · progrès ${g >= 0 ? '+' : '−'}${fmtN(Math.abs(g), 1)} km/h · note ${dfBatsNote(g)}/6` : ''}</div>`; };
 
 /* Schéma et mesures pour placer les plots */
 function dfPisteSVG(mode, L, opts = {}){
@@ -280,7 +323,7 @@ DF_LINE.eval = (n, sid, i, e) => { const S_ = dfEvScore(n, sid, i, e); if (!S_) 
 Object.assign(ACT, {
   dfSel: d => { const a = UI.dfSel = UI.dfSel || [], k = a.indexOf(d.sid); if (k >= 0) a.splice(k, 1); else a.push(d.sid); rerender(); },
   dfSelAll: () => { const n = curLesson(), L = dfGroupList().filter(s => dfPresent(n, s.id)).map(s => s.id); UI.dfSel = (UI.dfSel || []).length === L.length ? [] : L; rerender(); },
-  dfPlot: d => { const n = curLesson(), i = UI.ex, k = +d.k; (UI.dfSel || []).forEach(sid => dfSetX(n, sid, i, o => { o.pn = k; delete o.laps; delete o.plot; })); UI.dfSel = []; toast(`✓ Plot ${k} · ${fmtN(k * dfPlotStep() / 100, 1)} km/h`); rerender(); },
+  dfPlot: d => { const n = curLesson(), i = UI.ex, k = +d.k; (UI.dfSel || []).forEach(sid => dfSetX(n, sid, i, o => { o.pn = k; delete o.laps; delete o.plot; delete o.vv; delete o.vt; })); UI.dfSel = []; toast(`✓ Plot ${k} · ${fmtN(k * dfPlotStep() / 100, 1)} km/h`); rerender(); },
   dfSetLaps: async () => { const n = curLesson(), i = UI.ex, v = await numberBox('Nombre de tours complets', null, { step: 1, min: 0, max: 40 }); if (v == null) return;
     (UI.dfSel || []).forEach(sid => dfSetX(n, sid, i, o => { const L = o.laps || []; o.laps = Array.from({ length: Math.round(v) }, (_, k) => L[k] ?? null); })); rerender(); },
   dfLapAdd: (d, el, force) => { const n = curLesson(), i = +d.i, e = dfEx(n, i), T = dfTimer(`${DF_TEST(e.t) ? 't' : 'q'}${n}-${i}`), t = T.run || T.acc ? r10(dfTNow(T), 2) : null;
@@ -312,5 +355,11 @@ Object.assign(ACT, {
   dfPilOpen: d => { UI.dfPk = null; dfPilModal(curLesson(), d.sid, +d.i); },
   dfPilSet: d => { const n = curLesson(), i = +d.i; dfSetX(n, d.sid, i, X => { X.pil = X.pil || {}; const by = (X.pil[d.key] || {}).by; X.pil[d.key] = { ...dfPilApply({ ...(X.pil[d.key] || {}) }, d), ...(by ? { by } : {}) }; });
     UI.dfPk = d.key; dfPilModal(n, d.sid, i); },
-  dfPlotsGuide: () => dfPlotsGuide(),
+  dfPlotsGuide: d => { const e = d && d.i != null && d.i !== '' ? dfEx(d.n ? +d.n : curLesson(), +d.i) : null; return e && dfProto(e) === 'vameval' ? dfVamGuide(e) : dfPlotsGuide(); },
+  dfVamStop: d => { const n = curLesson(), i = +d.i, e = dfEx(n, i), x = dfX(n, d.sid, i) || {};
+    if (x.vv != null) { dfSetX(n, d.sid, i, o => { delete o.vv; delete o.vt; }); toast('↩ ' + nameOf(d.sid) + ' : arrêt annulé'); return rerender(); }
+    const v0 = e.v0 || 8, el = dfTNow(dfTimer(`t${n}-${i}`)), st = dfVamAt(el, v0);
+    dfSetX(n, d.sid, i, o => { o.vv = st.done ?? r10(v0 - 0.5, 1); o.vt = r10(el, 1); o.v0 = v0; delete o.pn; }); beepShort();
+    toast(`⏹ ${nameOf(d.sid)} : VMA ${fmtN(st.done ?? v0 - 0.5, 1)} km/h`); rerender(); },
+  dfVamSet: d => { const n = curLesson(), i = UI.ex, e = dfEx(n, i), v = +d.v; (UI.dfSel || []).forEach(sid => dfSetX(n, sid, i, o => { o.vv = v; o.v0 = e.v0 || 8; delete o.vt; delete o.pn; })); UI.dfSel = []; toast(`✓ ${fmtN(v, 1)} km/h`); rerender(); },
 });

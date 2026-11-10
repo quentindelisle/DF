@@ -42,7 +42,8 @@ profAppel = () => { const n = curLesson();
    PROGRAMMATION DU CYCLE
    ===================================================================== */
 const DF_SCHEMA = {
-  aventuriers:[ { k:'dur', l:'Durée du jeu', u:'min', min:10, max:60, st:5 },
+  aventuriers:[ { k:'plat', l:'Plateau de jeu', opts:Object.entries(DF_PLATEAUX).map(([k, P]) => [k, P.n]) }, { k:'seg', l:'Distance d\'un tronçon', seg:true },
+    { k:'dur', l:'Durée du jeu', u:'min', min:10, max:60, st:5 },
     { k:'taille', l:'Équipes', opts:[[2, 'Binômes'], [3, 'Trinômes']] }, { k:'nbParc', l:'Parcours par équipe', u:'', min:1, max:5, st:1 },
     { k:'coefTri', l:'Coefficient des trinômes (s\'il reste des binômes)', u:'', min:0.5, max:1, st:0.05 }, { k:'tabs', l:'Tablettes pour la saisie', u:'', min:1, max:8, st:1 },
     { k:'form', l:'Constitution des équipes', opts:[['libre', 'Libre (à la main)'], ['alea', 'Aléatoire'], ['proche', 'VMA proches'], ['equi', 'VMA équilibrées']] },
@@ -57,6 +58,7 @@ const dfStepper = (act, attrs, disp) => `<div class="stepper"><button class="cbt
 function dfSchemaRows(n, i, e){
   return (DF_SCHEMA[e.t] || []).map(f => { const a = `data-n="${n}" data-i="${i}" data-k="${f.k}"`;
     if (f.bool) return `<div class="form-row"><span>${esc(f.l)}</span><button class="btn small ${e[f.k] ? 'green' : ''}" data-action="dfPB" ${a}>${e[f.k] ? '✓ Oui' : 'Non'}</button></div>`;
+    if (f.seg) return `<div class="form-row"><span>${esc(f.l)}<br><small class="muted">1 tronçon du plateau = cette distance (${dfSegTours(e)} tour(s) de ${dfLap()} m)</small></span><div class="row">${dfStepper('dfSeg', a, dfSegM(e) + ' m')}<button class="btn small" data-action="dfSegSet" ${a}>✎</button></div></div>`;
     if (f.opts) return `<div class="form-row"><span>${esc(f.l)}</span><div class="choices">${f.opts.map(([v, l]) => `<button class="ch ${e[f.k] === v ? 'on' : ''}" data-action="dfPO" ${a} data-v="${v}" ${e[f.k] === v ? 'style="background:var(--navy);border-color:var(--navy);color:#fff"' : ''}>${esc(l)}</button>`).join('')}</div></div>`;
     return `<div class="form-row"><span>${esc(f.l)}</span>${dfStepper('dfPS', a, `${fmtN(e[f.k], 2)} ${f.u}`)}</div>`; }).join('');
 }
@@ -96,7 +98,7 @@ function dfParcEditor(n, i, e){
   return `<div class="card"><div class="btn-row spread"><h3 style="margin:0">🎫 Parcours (${e.nbParc} par équipe)</h3><div class="btn-row">
       <button class="btn small" data-action="dfParcA" data-n="${n}" data-i="${i}" data-m="alea">🎲 Aléatoire</button><button class="btn small" data-action="dfParcA" data-n="${n}" data-i="${i}" data-m="vma">⚡ Selon la VMA</button></div></div>
     <p class="muted">${e.parc && Object.keys(e.parc).length ? '✓ Parcours attribués.' : 'Non attribués : tirage automatique identique sur toutes les tablettes.'} Valeur d'un parcours = nombre de tronçons du plus court chemin.</p>
-    ${Array.from({ length: nb }, (_, t) => `<div class="df-tkrow"><span class="dot" style="background:${dfTeamCol(t).c}"></span><b>${esc(dfTeamName(e, t))}</b> ${(P[t] || []).map(id => DF_TICKETS[id]).filter(Boolean).map(tk => `<span class="pill">${esc(tk.a)} → ${esc(tk.b)} · ${tk.pts}</span>`).join(' ')}</div>`).join('')}</div>`;
+    ${Array.from({ length: nb }, (_, t) => `<div class="df-tkrow"><span class="dot" style="background:${dfTeamCol(t).c}"></span><b>${esc(dfTeamName(e, t))}</b> ${(P[t] || []).map(id => dfBoard(e).tickets[id]).filter(Boolean).map(tk => `<span class="pill">${esc(tk.a)} → ${esc(tk.b)} · ${tk.pts}</span>`).join(' ')}</div>`).join('')}</div>`;
 }
 function dfPisteCard(){
   const P = dfPiste();
@@ -129,9 +131,19 @@ function dfProfPlan(){
         <div class="btn-row"><button class="btn small" data-action="dfFiche" data-t="${e.t}" data-n="${n}" data-i="${i}">📖 Fiche</button><button class="btn small ghost" data-action="dfXmv" data-n="${n}" data-i="${i}" data-d="-1" ${i ? '' : 'disabled'}>↑</button>
         <button class="btn small ghost" data-action="dfXmv" data-n="${n}" data-i="${i}" data-d="1" ${i < E.length - 1 ? '' : 'disabled'}>↓</button><button class="btn small ghost" data-action="dfXdel" data-n="${n}" data-i="${i}">🗑</button></div></div>
       <p class="muted">${esc(dfExSummary(e))}</p>
-      ${DF_FRAC(e.t) ? dfFracEditor(n, i, e) : DF_TEST(e.t) ? `<p>${e.t === 'bats' ? '🔥 Retest du demi-Cooper : évaluation intermédiaire notée /6 sur le progrès de VMA ; la nouvelle VMA sert aux cibles des fractionnés et de l\'évaluation.' : '⏱️ 6 minutes de course, VMA = distance ÷ 100.'}</p><button class="btn small" data-action="dfPlotsGuide">📍 Placement des plots</button>` : dfSchemaRows(n, i, e)}
+      ${DF_FRAC(e.t) ? dfFracEditor(n, i, e) : DF_TEST(e.t) ? dfTestEditor(n, i, e) : dfSchemaRows(n, i, e)}
       ${['equipe', 'aventuriers', 'pelotons'].includes(e.t) ? `<details class="df-compd" ${UI.dfComp === n + '-' + i ? 'open' : ''}><summary data-action="dfComp" data-k="${n}-${i}"><b>🧩 ${e.t === 'pelotons' ? 'Séries' : 'Équipes'}${e.t === 'aventuriers' ? ' et parcours' : ''}</b></summary>${UI.dfComp === n + '-' + i ? dfComposer(n, i, e) : ''}</details>` : ''}</div>`).join('')}
     ${E.length < 4 ? `<div class="card"><b>＋ Ajouter un exercice</b><div class="df-exgrid">${Object.entries(DFX).map(([t, X]) => `<button class="df-exbtn" style="--xc:${X.c}" data-action="dfXadd" data-n="${n}" data-t="${t}"><span class="ico">${X.ico}</span><b>${esc(X.n)}</b></button>`).join('')}</div></div>` : '<p class="muted">4 exercices au maximum par leçon.</p>'}`;
+}
+/* test VMA : protocole au choix (demi-Cooper ou VAMEVAL) */
+function dfTestEditor(n, i, e){
+  const pr = dfProto(e), a = `data-n="${n}" data-i="${i}"`;
+  return `${e.t === 'bats' ? '<p>🔥 Retest : évaluation intermédiaire notée /6 sur le progrès de VMA ; la nouvelle VMA sert aux cibles des fractionnés et de l\'évaluation.</p>' : ''}
+    <div class="form-row"><span>Protocole du test</span><div class="choices">${Object.entries(DF_PROTO).map(([k, P]) => `<button class="ch ${pr === k ? 'on' : ''}" data-action="dfPO" ${a} data-k="proto" data-v="${k}" ${pr === k ? 'style="background:var(--navy);border-color:var(--navy);color:#fff"' : ''}>${P.ico} ${esc(P.n)}</button>`).join('')}</div></div>
+    <p class="muted">${esc(DF_PROTO[pr].d)}</p>
+    ${pr === 'vameval' ? `<div class="form-row"><span>Vitesse du premier palier</span>${dfStepper('dfV0', a, fmtN(e.v0 || 8, 1) + ' km/h')}</div>
+      <p class="muted">Plots tous les <b>${fmtN(dfVamStep(), 1)} m</b> (${dfPiste().mode === 'couloir' ? 'sur le couloir' : 'autour de la piste'}). La tablette émet un bip à chaque plot et un double bip à chaque changement de palier.</p>` : ''}
+    <button class="btn small" data-action="dfPlotsGuide" data-i="${i}" data-n="${n}">📍 Placement des plots</button>`;
 }
 /* fiche du cycle imprimable */
 function dfCycPrint(){
@@ -196,17 +208,17 @@ function dfProfBilan(){
 }
 const dfRowsP = (n, f) => sortedStudents().filter(s => dfPresent(n, s.id)).map(f).join('');
 const DF_BILAN = {
-  cooper: (n, i, e) => `<table class="tbl"><thead><tr><th>Élève</th><th>Plot d'arrêt</th><th>Distance</th><th>VMA</th>${e.t === 'bats' ? '<th>Avant</th><th>Progrès</th><th>Note /6</th>' : ''}</tr></thead><tbody>${dfRowsP(n, s => { const x = dfX(n, s.id, i) || {}, g = e.t === 'bats' ? dfBatsGain(n, s.id, i) : null, r = e.t === 'bats' ? dfVmaRef(n, s.id, i) : null;
-    return `<tr><td class="nm">${band(s.id)}${esc(nameOf(s.id))}</td><td>${x.ab ? '🚩' : dfTestPn(x) ?? '—'}</td><td>${dfKm(dfTestDist(x))}</td><td><b>${fmtN(dfTestVma(n, s.id, i), 1)}</b></td>
+  cooper: (n, i, e) => `<table class="tbl"><thead><tr><th>Élève</th><th>${dfProto(e) === 'vameval' ? 'Dernier palier' : 'Plot d\'arrêt'}</th><th>Distance</th><th>VMA</th>${e.t === 'bats' ? '<th>Avant</th><th>Progrès</th><th>Note /6</th>' : ''}</tr></thead><tbody>${dfRowsP(n, s => { const x = dfX(n, s.id, i) || {}, g = e.t === 'bats' ? dfBatsGain(n, s.id, i) : null, r = e.t === 'bats' ? dfVmaRef(n, s.id, i) : null;
+    return `<tr><td class="nm">${band(s.id)}${esc(nameOf(s.id))}</td><td>${x.ab ? '🚩' : x.vv != null ? fmtN(x.vv, 1) + ' km/h' : dfTestPn(x) ?? '—'}</td><td>${dfKm(dfTestDist(x))}</td><td><b>${fmtN(dfTestVma(n, s.id, i), 1)}</b></td>
       ${e.t === 'bats' ? `<td>${r ? fmtN(r.v, 1) : '—'}</td><td>${g == null ? '—' : (g >= 0 ? '+' : '−') + fmtN(Math.abs(g), 1)}</td><td><b>${dfBatsNote(g) ?? '—'}</b></td>` : ''}</tr>`; })}</tbody></table>`,
   equipe: (n, i, e) => { const teams = dfTeams(n, i, e);
     return Array.from({ length: e.nbEq }, (_, t) => { const M = sortedStudents().filter(s => teams[s.id] === t && dfPresent(n, s.id)), tl = M.reduce((a, s) => a + ((dfX(n, s.id, i) || {}).laps || []).length, 0);
       return `<h4><span class="dot" style="background:${dfTeamCol(t).c}"></span> ${esc(dfTeamName(e, t))} · ${tl} tours · ${dfKm(tl * dfLap())}</h4><table class="tbl"><thead><tr><th>Élève</th><th>Tours</th><th>Distance</th><th>Part de l'équipe</th><th>Régularité</th><th>Pauses</th></tr></thead><tbody>
       ${M.map(s => { const x = dfX(n, s.id, i) || {}, L = (x.laps || []).length, r = dfRegul(x); return `<tr><td class="nm">${band(s.id)}${esc(nameOf(s.id))}</td><td>${x.ab ? '🚩 ' : ''}${L}</td><td>${dfKm(L * dfLap())}</td><td>${tl ? Math.round(L / tl * 100) + ' %' : '—'}</td><td>${r == null ? '—' : r + ' %'}</td><td>${(x.pz || []).length || ''}</td></tr>`; }).join('')}</tbody></table>`; }).join(''); },
   aventuriers: (n, i, e) => { const A = dfAvScores(n, i, e);
-    return dfAvTable(n, i, e) + `<h4>Distance par coureur (comparée à son ${e.taille === 3 ? 'trinôme' : 'binôme'})</h4><table class="tbl"><thead><tr><th>Équipe</th><th>Coureur</th><th>Trajets</th><th>Tours</th><th>Distance</th><th>Part de l'équipe</th></tr></thead><tbody>
-      ${A.map(a => a.members.map((s, k) => { const B = (dfX(n, s.id, i) || {}).buys || [], tr = B.reduce((x, b) => x + DF_ROUTES[b.r].segments, 0);
-        return `<tr>${k ? '' : `<td rowspan="${a.members.length}"><span class="dot" style="background:${dfTeamCol(a.t).c}"></span> ${esc(dfTeamCol(a.t).n)}</td>`}<td class="nm">${band(s.id)}${esc(nameOf(s.id))}</td><td>${B.length}</td><td>${tr}</td><td>${dfKm(tr * dfLap())}</td><td>${a.laps ? Math.round(tr / a.laps * 100) + ' %' : '—'}</td></tr>`; }).join('')).join('')}</tbody></table>`; },
+    return dfAvTable(n, i, e) + `<h4>Distance par coureur (comparée à son ${e.taille === 3 ? 'trinôme' : 'binôme'})</h4><table class="tbl"><thead><tr><th>Équipe</th><th>Coureur</th><th>Trajets</th><th>Tronçons</th><th>Distance</th><th>Part de l'équipe</th></tr></thead><tbody>
+      ${A.map(a => a.members.map((s, k) => { const B = (dfX(n, s.id, i) || {}).buys || [], tr = dfAvSegs(e, B);
+        return `<tr>${k ? '' : `<td rowspan="${a.members.length}"><span class="dot" style="background:${dfTeamCol(a.t).c}"></span> ${esc(dfTeamCol(a.t).n)}</td>`}<td class="nm">${band(s.id)}${esc(nameOf(s.id))}</td><td>${B.length}</td><td>${tr}</td><td>${dfKm(tr * dfSegM(e))}</td><td>${a.laps ? Math.round(tr / a.laps * 100) + ' %' : '—'}</td></tr>`; }).join('')).join('')}</tbody></table>`; },
   pelotons: (n, i, e) => `<table class="tbl"><thead><tr><th>Élève</th><th>Série</th>${Array.from({ length: e.nb }, (_, k) => `<th>C${k + 1}</th>`).join('')}<th>Note /10</th></tr></thead><tbody>${dfRowsP(n, s => { const N = dfPelNote(n, s.id, i, e), x = dfX(n, s.id, i) || {}, t = dfTeamOf(n, i, e, s.id);
     return `<tr><td class="nm">${band(s.id)}${esc(nameOf(s.id))}</td><td>${t != null ? `<span class="dot" style="background:${dfTeamCol(t).c}"></span>` : ''}</td>${Array.from({ length: e.nb }, (_, k) => { const c = (x.c || [])[k] || {}, sc = dfPelCourse(n, s.id, i, e, k), J = dfJok(c.j);
       return `<td>${c.t ? `<b>${dfT(c.t)}</b> · ${fmtN(sc.pct, 0)} %<br><small>${fmtN(sc.perf, 1)}/5${J ? ` + 🃏 ${c.ok ? sc.jp : '✗'}` : ''} = ${fmtN(sc.tot, 1)}</small>` : '—'}</td>`; }).join('')}<td><b>${N.note == null ? '—' : fmtN(N.note, 1)}</b></td></tr>`; })}</tbody></table>`,
@@ -307,7 +319,14 @@ Object.assign(ACT, {
   dfXdel: async d => { const n = +d.n, i = +d.i; if (!(await confirmBox('Retirer cet exercice ?', 'Les saisies déjà faites pour les exercices suivants changent de place.', 'Retirer', true))) return; dfEditL(n).ex.splice(i, 1); dfSaveP(); },
   dfXmv: d => { const n = +d.n, i = +d.i, j = i + +d.d, E = dfEditL(n).ex; if (j < 0 || j >= E.length) return; [E[i], E[j]] = [E[j], E[i]]; dfSaveP(); },
   dfPS: d => { const n = +d.n, i = +d.i, e = dfEditL(n).ex[i], f = DF_SCHEMA[e.t].find(x => x.k === d.k); e[d.k] = r10(Math.max(f.min, Math.min(f.max, (+e[d.k] || 0) + +d.d * f.st)), 2); dfSaveP(); },
-  dfPO: d => { const n = +d.n, i = +d.i, e = dfEditL(n).ex[i]; e[d.k] = isFinite(+d.v) && d.v !== '' ? +d.v : d.v; dfSaveP(); },
+  dfPO: async d => { const n = +d.n, i = +d.i, e = dfEditL(n).ex[i], v = isFinite(+d.v) && d.v !== '' ? +d.v : d.v; if (e[d.k] === v) return;
+    if (d.k === 'plat') { const used = sortedStudents().some(s => ((dfX(n, s.id, i) || {}).buys || []).length);
+      if (used && !(await confirmBox('Changer de plateau ?', 'Des trajets ont déjà été saisis sur l\'ancien plateau : ils ne correspondront plus à la carte.', 'Changer'))) return;
+      delete e.parc; }
+    e[d.k] = v; dfSaveP(); },
+  dfSeg: d => { const n = +d.n, i = +d.i, e = dfEditL(n).ex[i]; e.seg = Math.max(25, Math.min(3000, dfSegM(e) + +d.d * 25)); dfSaveP(); },
+  dfSegSet: async d => { const n = +d.n, i = +d.i, e = dfEditL(n).ex[i]; const v = await numberBox('Distance d\'un tronçon (m)', dfSegM(e), { step: 1, min: 25, max: 3000, unit: 'm' }); if (v == null) return; e.seg = Math.round(v); dfSaveP(); },
+  dfV0: d => { const n = +d.n, i = +d.i, e = dfEditL(n).ex[i]; e.v0 = Math.max(6, Math.min(12, (e.v0 || 8) + +d.d * 0.5)); dfSaveP(); },
   dfPB: d => { const n = +d.n, i = +d.i, e = dfEditL(n).ex[i]; e[d.k] = !e[d.k]; dfSaveP(); },
   dfForm: d => { const n = +d.n, i = +d.i, e = dfEditL(n).ex[i], F = dfClone(DF_FORMES[e.t][+d.f]); delete e.steps; Object.assign(e, F, { forme: F.n }); dfSaveP(); },
   dfFO: d => { const n = +d.n, i = +d.i, e = dfEditL(n).ex[i]; dfSetPath(e, d.k, d.v); e.forme = '';

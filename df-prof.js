@@ -304,7 +304,7 @@ frDetailView = sid => _dfFrDetail(sid).replace(/ \(moyenne [^)]*\)/g, '')
 const DF_BLOCKS = [['afl1', 'AFL1 · 3 × 500 m', 12], ['bats', 'Bats tes perfs', 6], ['frInv', '🔴 Fil rouge · Investissement', 6], ['frPil', '🔵 Fil bleu · Piliers', 6]];
 function dfProfEval(){
   return `<div class="card"><h3>📝 Évaluation par blocs</h3><p class="muted">Chaque bloc est affiché séparément (pas de total). Survolez ou touchez une case pour le détail. <b>Fil rouge /6</b> = investissement comme coureur /3 (exercices sans abandon, cibles des fractionnés) + comme observateur /3 (observations faites, accord avec l'enseignant). <b>Fil bleu /6</b> = piliers techniques : notes de l'enseignant (2/3, 🎓 Piliers) et des observateurs (1/3).</p>
-      <button class="btn primary" data-action="dfEvalXls">📊 Export Excel</button></div>
+      <div class="btn-row"><button class="btn primary" data-action="dfEvalXls">📊 Export Excel</button><button class="btn" data-action="dfEvalFiche">📖 Fiche élève : comment je suis évalué</button></div></div>
     <div class="card scroll-x"><table class="tbl"><thead><tr><th>Élève</th>${DF_BLOCKS.map(([, l, m]) => `<th>${esc(l)}<br><small>/${m}</small></th>`).join('')}</tr></thead><tbody>
     ${sortedStudents().map(s => { const B = dfEvalBlocks(s.id); return `<tr><td class="nm">${band(s.id)}${esc(nameOf(s.id))}</td>${DF_BLOCKS.map(([k]) => `<td title="${esc(B[k + 'Det'] || B[k + 'Txt'] || '')}"><b>${B[k] == null ? '—' : fmtN(B[k], 2)}</b>${B[k + 'Txt'] ? `<br><small>${esc(B[k + 'Txt'])}</small>` : ''}</td>`).join('')}</tr>`; }).join('')}</tbody></table></div>`;
 }

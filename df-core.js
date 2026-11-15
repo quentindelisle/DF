@@ -333,7 +333,6 @@ viewEntry = function(){
       <div class="btn-row"><span class="muted">${x && x.ab ? '🚩 Abandon' : done ? '✓ fait' : x ? '… en cours' : '—'}${dfExDist(n, sid, i) ? ' · ' + dfKm(dfExDist(n, sid, i)) : ''}</span>
       <button class="btn small ${x && x.ab ? 'red' : 'ghost'}" data-action="dfAb" data-i="${i}" data-sid="${sid}">🚩 Abandon</button>
       <button class="btn small" data-action="dfOpen" data-i="${i}">Ouvrir ▸</button></div></div>${DF_LINE[e.t] ? DF_LINE[e.t](n, sid, i, e) : ''}</div>`; }).join('');
-  h += dfFieldCardMet(n, sid);
   h += obsCard(n, sid);
   if (isProf() && UI.profUnlocked) h += `<div class="card"><h3>📝 Remarque de l'enseignant <small class="muted">(reste sur cette tablette)</small></h3>
     <textarea id="prof-note" rows="2" style="width:100%" placeholder="Comportement, progrès, conseil, blessure…">${esc(noteOf(n, sid))}</textarea>
@@ -343,11 +342,6 @@ viewEntry = function(){
   return h;
 };
 const DF_LINE = {};       // résumé par type dans la fiche élève
-function dfFieldCardMet(n, sid){
-  const f = fieldById('met'); if (!f) return '';
-  return `<div class="card field-card"><div class="fc-head"><h3>${esc(f.label)}</h3></div>${f.help ? `<div class="muted help">${esc(f.help)}</div>` : ''}
-    <div class="ctl-grid one">${ctlHTML(f, rawVal(n, sid, f), null, null)}</div>${f.double && isProf() && UI.profUnlocked ? pevRow(n, sid, f) : ''}</div>`;
-}
 
 /* tuile d'élève commune */
 function dfTile(sid, inner, opts = {}){

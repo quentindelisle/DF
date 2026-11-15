@@ -163,7 +163,7 @@ makeDemoClass = function(){
         else if (DF_FRAC(e.t)) { const ok = 0.45 + q * 0.5; o = { r: Array.from({ length: e.series || 1 }, () => dfReps(e).map(() => { const z = Math.random(); return z < ok ? 2 : z < ok + 0.2 ? 1 : 0; })), pil: { fin: pilObj(l, s.id, mate.id, q) } }; }
         else if (e.t === 'eval') { const b = dfTime(e.d, vma, rnd_(97, 108) + q * 4); o = { c: [0, 1, 2].map(() => ({ t: r10(b + rnd_(-3, 5) * (1.2 - q), 2) })), pil: { fin: pilObj(l, s.id, mate.id, q) } }; }
         if (o) { if (k % 13 === 5 && l === 5 && i === 0) o.ab = true; o.ts = now(); x[i] = o; } });
-      const v = { x, met: Math.max(1, Math.min(4, Math.round(1 + q * 3 + rnd_(-0.5, 0.5)))) };
+      const v = { x };
       if (k % 6 === 2 && DF_FRAC((dfExs(l)[0] || {}).t)) v.fo = true;
       if (CFG.evalObs) v._obs = { by: mate.id, lv: Math.max(1, Math.min(4, Math.round(2 + q * 2 + rnd_(-0.6, 0.6)))) };
       S.results[l][s.id] = { v, ts: now(), d: 'demo' };
@@ -227,6 +227,9 @@ tr.abd{opacity:.5}
 .df-tsel.on{background:var(--tc);color:#fff;box-shadow:0 0 0 4px rgba(0,0,0,.15)}.df-tsel.on b,.df-tsel.on small{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.45)}
 .df-fschema{border:3px solid var(--navy);border-radius:16px;padding:10px 14px;margin:10px 0;background:#F6FAFF}.df-fschema h3{margin-top:4px}
 .df-cone{display:inline-block;width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:18px solid var(--cc);filter:drop-shadow(0 0 1px #0B346E);vertical-align:-3px}
+.df-evsum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:8px 0}.df-evsum>div{border:3px solid var(--navy);border-radius:14px;padding:8px 12px;display:flex;flex-direction:column;background:#fff}.df-evsum span{font-size:26px;font-weight:900;color:var(--navy)}.df-evsum small{color:var(--grey);font-weight:700}
+.df-evpil td{text-align:left;white-space:normal;min-width:110px}
+.df-ev2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}.df-ev2>div{border:2px solid var(--line);border-radius:12px;padding:6px 12px}.df-ev2 h4{margin:6px 0}
 .df-vamnow{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;font-size:18px;border-color:var(--navy)}
 .tile.df-stopped{background:#EAF2FB}
 .df-timer b{font-size:clamp(34px,6vw,56px)}
@@ -249,3 +252,61 @@ profExport = () => _dfProfExport().replace(/<div class="card"><h3>🧪 Classe de
 const _dfProfClasse = profClasse;
 profClasse = () => _dfProfClasse() + `<div class="card"><h3>🧪 Classe de démonstration</h3><p class="muted">Une classe fictive de 18 élèves avec un cycle complet (8 leçons, tous les exercices, évaluation, piliers), pour tester ou présenter l'appli. Elle s'ajoute à vos classes et se supprime comme une classe normale.</p>
   <button class="btn" data-action="demoClass">🧪 Créer la classe de démonstration</button></div>`;
+
+/* =====================================================================
+   📝 Fiche élève « Comment je suis évalué » : construite d'après la programmation
+   (leçon d'évaluation, Bats tes perfs, fils suivis, piliers et leur forme de saisie)
+   ===================================================================== */
+function dfEvalFiche(){
+  const X = dfAllEx(), EV = X.filter(x => x.e.t === 'eval'), BT = X.filter(x => x.e.t === 'bats'), T1 = X.filter(x => x.e.t === 'cooper');
+  const fil = id => FRS.find(fr => fr.id === id), FR = fil('FR'), FB = fil('FM');
+  const li = a => `<ul>${a.map(x => `<li>${x}</li>`).join('')}</ul>`, L = a => a.map(x => 'L' + x).join(', ');
+  const ts = s => { s = Math.round(s); const m = Math.floor(s / 60), r = s % 60; return m ? `${m} min ${String(r).padStart(2, '0')} s` : `${r} s`; };
+  const parts = [], blocks = [];
+  /* 1. performance : évaluation finale */
+  if (EV.length) { const e = EV[EV.length - 1].e, ls = [...new Set(EV.map(x => x.l))], vma = 12, t100 = dfTime(e.d, vma, 100);
+    parts.push(['🏁 Ma performance', `${e.nb} × ${e.d} m`, 12]);
+    blocks.push(`<h3>🏁 1. Ma performance : ${e.nb} courses de ${e.d} m · /12 <small class="muted">(leçon ${L(ls)})</small></h3>
+      <p>Tu cours ${e.nb} fois ${e.d} m avec ${e.rec} min de récupération entre les courses. Ta note ne dépend pas de ta vitesse « en général » : elle dépend de <b>ta VMA</b>. Chacun est jugé sur son propre niveau.</p>
+      ${li([`<b>Vitesse /9</b> : chaque course rapporte jusqu'à ${fmtN(9 / e.nb, 2)} pts selon le % de ta VMA auquel tu cours.`, `<b>Régularité /3</b> : on enlève 0,5 pt par tranche de 4 s d'écart entre deux courses qui se suivent. Des courses au même temps = 3/3.`])}
+      <div class="scroll-x"><table class="tbl"><thead><tr><th>% de ta VMA</th>${DF_EV_TAB.map(([p]) => `<th>${p} %${p === 110 ? ' et +' : ''}</th>`).join('')}<th>moins de 85 %</th></tr></thead><tbody>
+        <tr><td>Points par course (sur 3)</td>${DF_EV_TAB.map(([, v]) => `<td><b>${fmtN(v, 1)}</b></td>`).join('')}<td>0</td></tr>
+        <tr><td>Exemple : VMA ${vma} km/h, temps sur ${e.d} m</td>${DF_EV_TAB.map(([p]) => `<td>${ts(dfTime(e.d, vma, p))}</td>`).join('')}<td>plus de ${ts(dfTime(e.d, vma, 85))}</td></tr></tbody></table></div>
+      <p class="muted">Pour calculer ton temps à 100 % de ta VMA : temps (s) = ${e.d} ÷ (VMA ÷ 3,6). Avec ${vma} km/h : ${e.d} ÷ ${fmtN(vma / 3.6, 2)} = ${ts(t100)}.</p>`); }
+  /* 2. progrès */
+  if (BT.length) { const ls = [...new Set(BT.map(x => x.l))], P = DF_PROTO[dfProto(BT[BT.length - 1].e)];
+    parts.push(['🔥 Mes progrès', 'Bats tes perfs', 6]);
+    blocks.push(`<h3>🔥 2. Mes progrès : Bats tes perfs · /6 <small class="muted">(leçon ${L(ls)})</small></h3>
+      <p>Tu refais le test VMA (${esc(P.n)})${T1.length ? ` du début du cycle (leçon ${L([...new Set(T1.map(x => x.l))])})` : ''}. La note dépend de combien ta VMA a progressé.</p>
+      <div class="scroll-x"><table class="tbl"><thead><tr><th>Ma VMA a…</th><th>baissé de plus de 1 km/h</th><th>un peu baissé</th><th>pas bougé</th><th>+0,5 à 1 km/h</th><th>+1,5 à 2 km/h</th><th>+2,5 km/h et plus</th></tr></thead>
+        <tbody><tr><td>Note /6</td><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td></tr></tbody></table></div>
+      <p class="muted">Ta VMA sert aussi à calculer toutes tes cibles : si elle progresse, tes cibles deviennent plus exigeantes.</p>`); }
+  /* 3. fil rouge */
+  if (FR) { parts.push(['🔴 Fil rouge', 'Mon investissement', 6]);
+    blocks.push(`<h3>🔴 ${blocks.length + 1}. Fil rouge · Mon investissement · /6 <small class="muted">(toutes les leçons)</small></h3>
+      <p>On regarde comment tu t'engages à <b>chaque leçon</b>, dans tes deux rôles.</p>
+      <div class="df-ev2"><div><h4>🏃 Comme coureur · /3</h4>${li(['Je fais tous les exercices <b>jusqu\'au bout</b>, sans abandonner.', 'Dans les fractionnés, j\'atteins <b>mes cibles</b> (✓ sur la tablette).'])}</div>
+        <div><h4>👀 Comme observateur · /3</h4>${li(['Je fais <b>toutes mes observations</b> sur la tablette, sans oublier.', 'Mes observations sont <b>justes</b> : ce que je note ressemble à ce que note le professeur.'])}</div></div>`); }
+  /* 4. fil bleu */
+  if (FB) { const pl = DF_PIL.map(p => { const ls = []; for (let l = 1; l <= S.settings.nbLessons; l++) if (dfLessonPil(l).includes(p.id)) ls.push(l); return { p, ls, m: dfPilMode(p) }; });
+    parts.push(['🔵 Fil bleu', 'Ma technique de course', 6]);
+    blocks.push(`<h3>🔵 ${blocks.length + 1}. Fil bleu · Ma technique de course (les piliers) · /6</h3>
+      <p>Tes observateurs et ton professeur regardent ta façon de courir. Le professeur compte pour <b>2/3</b>, tes observateurs pour <b>1/3</b>. Pour chaque pilier, c'est ton <b>dernier</b> niveau observé par le professeur qui compte : tu peux donc progresser jusqu'au bout.</p>
+      <div class="scroll-x"><table class="tbl df-evpil"><thead><tr><th>Pilier</th><th>Ce qu'on regarde</th><th>Du moins bien… au mieux</th><th>Leçons</th></tr></thead><tbody>
+      ${pl.map(({ p, ls, m }) => `<tr><td><b>${esc(p.n)}</b></td><td><small>${p.crit.map(esc).join(' · ')}</small></td><td><small>${m === 'desc' ? p.desc.map(d => esc(d.l)).join(' → ') : m === 'on' ? 'chaque critère : oui ou non' : 'note de 1 à 10'}</small></td><td>${ls.length ? L(ls) : '—'}</td></tr>`).join('')}</tbody></table></div>`); }
+  /* niveaux des fils */
+  const fils = [FR, FB].filter(Boolean);
+  const lv = fils.length ? `<h3>⚖️ Comment on passe au niveau du fil</h3>
+      <p>Pour ${fils.length > 1 ? 'chaque fil' : 'le fil'}, l'appli calcule une note sur 6 et propose un niveau. <b>C'est ton professeur qui décide du niveau final</b>, en regardant tes résultats sur tout le cycle : la note reste dans ce niveau.</p>
+      <table class="tbl"><thead><tr>${[1, 2, 3, 4].map(k => `<th><span class="cdot" style="background:${COMP_LV[k].c}"></span> ${COMP_LV[k].n}</th>`).join('')}</tr></thead><tbody><tr>${DF_LVB.slice(1).map(([a, b]) => `<td>${fmtN(a, 1)} à ${fmtN(b, 1)} / 6</td>`).join('')}</tr></tbody></table>
+      <p class="muted">Sur ta fiche (tablette), ${fils.length > 1 ? 'les pelotes montrent' : 'la pelote montre'} ton niveau à chaque leçon : tu peux suivre où tu en es.</p>` : '';
+  const tot = parts.reduce((a, p) => a + p[2], 0);
+  modal(`<h2>📝 Comment je suis évalué·e en demi-fond</h2><p class="muted">Fiche élève · ${esc(className())} · cycle de ${S.settings.nbLessons} leçons</p>
+    <div class="df-evsum">${parts.map(([n, d, m]) => `<div><b>${n}</b><small>${d}</small><span>/${m}</span></div>`).join('')}</div>
+    <p>Mon évaluation est faite de <b>${parts.length} parties</b>, notées séparément (${parts.map(p => p[2]).join(' + ')} = ${tot} points). Le principe : <b>je suis comparé·e à moi-même</b>, grâce à ma VMA.</p>
+    ${blocks.join('')}${lv}
+    <h3>💡 Mes conseils</h3>${li(['Connais ta VMA par cœur et calcule tes temps cibles avant l\'évaluation.', ...(EV.length ? [`Sur les ${EV[EV.length - 1].e.d} m, la régularité vaut 3 points : ne pars pas trop vite à la première course.`] : []), 'Chaque leçon compte pour les fils : on ne rattrape pas une leçon où on a abandonné.', 'Observer, c\'est aussi être noté : prends ton rôle d\'observateur au sérieux.'])}
+    <div class="btn-row spread no-print" style="margin-top:12px"><button class="btn" data-print>🖨 Imprimer</button><button class="btn primary" data-close>Fermer</button></div>`, { wide: true });
+  dfModalBind();
+}
+ACT.dfEvalFiche = () => dfEvalFiche();

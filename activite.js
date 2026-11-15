@@ -13,7 +13,7 @@ window.APP_CONFIG = {
   author: 'Quentin Delisle',
   color: '#0B346E',                  // bleu marine de l'icône
   accent: '#F7941D',                 // orange de l'anneau
-  version: '2.2.0',
+  version: '2.2.1',
   url: '',
 
   mode: 'cycle',
@@ -28,9 +28,6 @@ window.APP_CONFIG = {
     { id:'cibles', label:'Cibles des fractionnés', type:'calc', per:'lesson', formula:'', unit:'%', dec:0, better:'high' },
     { id:'pil', label:'Piliers (observateurs)', type:'calc', per:'lesson', formula:'', unit:'%', dec:0, better:'high' },
     { id:'ab', label:'Abandons', type:'calc', per:'lesson', formula:'', dec:0, better:'low' },
-    { id:'met', label:'Je m\'organise (méthode)', type:'choice', per:'lesson', double:true,
-      help:'L\'observateur situe l\'échauffement, le respect des récupérations et le rôle tenu.',
-      opts:[ { l:'Insuffisant', v:1, c:'#D0161B' }, { l:'Fragile', v:2, c:'#F07000' }, { l:'Satisfaisant', v:3, c:'#86DC96' }, { l:'Très bon', v:4, c:'#0B4F1C' } ] },
   ],
 
   parametres: [],

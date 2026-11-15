@@ -236,62 +236,103 @@ DF_BILAN.bats = DF_BILAN.cooper; DF_BILAN.fl = DF_BILAN.fc;
 const dfInterp = (x, t) => x == null ? null : Math.round(interp(t, x) * 4) / 4;
 function dfAllEx(upTo){ const a = []; for (let l = 1; l <= (upTo || S.settings.nbLessons); l++) dfExs(l).forEach((e, i) => a.push({ l, i, e })); return a; }
 const dfLessonHeld = l => Object.keys(S.results[l] || {}).length > 0;
+/* ---------- Briques des fils (valeurs de 0 à 1, null si rien à évaluer) ---------- */
+const dfFracLike = e => DF_FRAC(e.t) || e.t === 'eval';                         // exercices où l'on observe un camarade
+/* coureur : exercices faits sans abandon (régularité) et cibles des fractionnés (qualité) */
+function dfInvRunner(sid, X){
+  const slots = X.filter(x => dfLessonHeld(x.l) && dfPresent(x.l, sid)), ok = slots.filter(x => { const o = dfX(x.l, sid, x.i); return o && !o.ab; });
+  const cells = []; X.filter(x => DF_FRAC(x.e.t)).forEach(x => dfFracCells(dfX(x.l, sid, x.i)).forEach(v => cells.push(v / 2)));
+  const reg = slots.length ? Math.max(0, Math.min(1, (ok.length / slots.length - 0.5) / 0.5)) : null, qual = cells.length ? Math.max(0, Math.min(1, (avg(cells) - 0.4) / 0.5)) : null;
+  return { reg, qual, regTxt: slots.length ? `${ok.length}/${slots.length} exercices sans abandon` : '', qualTxt: cells.length ? `${Math.round(avg(cells) * 100)} % des cibles` : '' };
+}
+/* observateur : observations faites (quantité) et accord avec l'enseignant (qualité) */
+function dfInvObserver(sid, X){
+  const exp = X.filter(x => dfFracLike(x.e) && dfLessonHeld(x.l) && dfPresent(x.l, sid));
+  const did = exp.filter(x => S.students.some(r => Object.values((dfX(x.l, r.id, x.i) || {}).pil || {}).some(p => p.by === sid)));
+  const agr = []; X.forEach(x => { S.students.forEach(r => { const P = dfPP(x.l, r.id); if (!P) return;
+    Object.values((dfX(x.l, r.id, x.i) || {}).pil || {}).forEach(o => { if (o.by !== sid) return;
+      const d = vals(DF_PIL.map(p => { const a = dfPilScore(p, o[p.id]), b = dfPilScore(p, P[p.id]); return a == null || b == null ? null : 1 - Math.abs(a - b); })); if (d.length) agr.push(avg(d)); }); }); });
+  const q = exp.length ? did.length / exp.length : null;
+  return { quant: q, qual: agr.length ? Math.max(0, Math.min(1, (avg(agr) - 0.6) / 0.3)) : null,
+    quantTxt: exp.length ? `${did.length}/${exp.length} observations faites` : '', qualTxt: agr.length ? `accord ${Math.round(avg(agr) * 100)} % avec l'enseignant` : '' };
+}
+const dfMean = a => { const v = vals(a); return v.length ? avg(v) : null; };
+const dfQ = v => v == null ? null : Math.round(v * 4) / 4;                      // au quart de point
+/* 🔴 Fil rouge · Investissement /6 = coureur /3 + observateur /3 */
+function dfFilRouge(sid, X){
+  const R = dfInvRunner(sid, X), O = dfInvObserver(sid, X), c = dfMean([R.reg, R.qual]), o = dfMean([O.quant, O.qual]);
+  const cour = c == null ? null : dfQ(c * 3), obs = o == null ? null : dfQ(o * 3);
+  const tot = cour == null && obs == null ? null : cour != null && obs != null ? cour + obs : dfQ((cour ?? obs) * 2);
+  return { v: tot, cour, obs, short: `coureur ${cour == null ? '—' : fmtN(cour, 2)}/3 · observateur ${obs == null ? '—' : fmtN(obs, 2)}/3`, txt: `coureur ${cour == null ? '—' : fmtN(cour, 2)}/3 (${[R.regTxt, R.qualTxt].filter(Boolean).join(', ') || '—'}) · observateur ${obs == null ? '—' : fmtN(obs, 2)}/3 (${[O.quantTxt, O.qualTxt].filter(Boolean).join(', ') || '—'})` };
+}
+/* 🔵 Fil bleu · Piliers /6 : piliers notés par l'enseignant (2/3) et par les observateurs (1/3) */
+function dfFilBleu(sid, X){
+  const ps = []; X.forEach(x => Object.values((dfX(x.l, sid, x.i) || {}).pil || {}).forEach(o => { const m = dfPilMean(o); if (m != null) ps.push(m); }));
+  const last = {}; for (let l = 1; l <= S.settings.nbLessons; l++) { const P = dfPP(l, sid); if (P) DF_PIL.forEach(p => { if (P[p.id] != null) last[p.id] = P[p.id]; }); }
+  const pp = vals(DF_PIL.map(p => dfPilScore(p, last[p.id]))), el = ps.length ? avg(ps) : null, pr = pp.length ? avg(pp) : null;
+  const v = el == null && pr == null ? null : el != null && pr != null ? dfQ(pr * 4 + el * 2) : dfQ((pr ?? el) * 6);
+  return { v, txt: `enseignant ${pr == null ? '—' : Math.round(pr * 100) + ' %'}${pp.length ? ` (${pp.length}/${DF_PIL.length} piliers)` : ''} · observateurs ${el == null ? '—' : Math.round(el * 100) + ' %'}` };
+}
 function dfEvalBlocks(sid){
   const X = dfAllEx(), B = {};
   /* AFL1 : 3 × 500 m /12 (meilleure évaluation) */
   const ev = vals(X.filter(x => x.e.t === 'eval').map(x => (dfEvScore(x.l, sid, x.i, x.e) || {}).total)); B.afl1 = ev.length ? Math.max(...ev) : null;
   /* Bats tes perfs /6 (dernier) */
   const bt = X.filter(x => x.e.t === 'bats').map(x => dfBatsNote(dfBatsGain(x.l, sid, x.i))).filter(v => v != null); B.bats = bt.length ? bt[bt.length - 1] : null;
-  /* régularité de l'investissement /2 : exercices faits sans abandon */
-  const slots = X.filter(x => dfLessonHeld(x.l) && dfPresent(x.l, sid)); const okS = slots.filter(x => { const o = dfX(x.l, sid, x.i); return o && !o.ab; });
-  B.regInv = slots.length ? dfInterp(okS.length / slots.length, [[0.5, 0], [1, 2]]) : null; B.regInvTxt = slots.length ? `${okS.length}/${slots.length} exercices · ${slots.filter(x => (dfX(x.l, sid, x.i) || {}).ab).length} abandon(s)` : '';
-  /* qualité de l'investissement /3 : cibles des fractionnés */
-  const cells = []; X.filter(x => DF_FRAC(x.e.t)).forEach(x => dfFracCells(dfX(x.l, sid, x.i)).forEach(v => cells.push(v / 2)));
-  B.qualInv = cells.length ? dfInterp(avg(cells), [[0.4, 0], [0.9, 3]]) : null; B.qualInvTxt = cells.length ? Math.round(avg(cells) * 100) + ' % des cibles' : '';
-  /* observations faites par l'élève (comme observateur) */
-  const exp = X.filter(x => (DF_FRAC(x.e.t) || x.e.t === 'eval') && dfLessonHeld(x.l) && dfPresent(x.l, sid));
-  const did = exp.filter(x => S.students.some(r => Object.values((dfX(x.l, r.id, x.i) || {}).pil || {}).some(p => p.by === sid)));
-  const q = exp.length ? did.length / exp.length : null;
-  B.quantObs = q == null ? null : q >= 0.95 ? 2 : q >= 0.75 ? 1.5 : q >= 0.5 ? 1 : q > 0 ? 0.5 : 0;
-  B.quantObsTxt = q == null ? '' : (q >= 0.95 ? 'n\'oublie jamais' : q >= 0.75 ? 'oublie parfois' : q >= 0.5 ? 'oublie souvent' : q > 0 ? 'oublie très souvent' : 'n\'a pas encore documenté') + ` (${did.length}/${exp.length})`;
-  const agr = [];
-  for (let l = 1; l <= S.settings.nbLessons; l++) S.students.forEach(r => { const P = dfPP(l, r.id); if (!P) return;
-    dfExs(l).forEach((e, i) => Object.values((dfX(l, r.id, i) || {}).pil || {}).forEach(o => { if (o.by !== sid) return;
-      const d = vals(DF_PIL.map(p => { const a = dfPilScore(p, o[p.id]), b = dfPilScore(p, P[p.id]); return a == null || b == null ? null : 1 - Math.abs(a - b); })); if (d.length) agr.push(avg(d)); })); });
-  B.qualObs = agr.length ? dfInterp(avg(agr), [[0.6, 0], [0.9, 3]]) : null; B.qualObsTxt = agr.length ? `accord ${Math.round(avg(agr) * 100)} % avec l'enseignant (${agr.length})` : 'pas encore comparable';
-  /* piliers évalués par les observateurs /3 */
-  const ps = []; X.forEach(x => Object.values((dfX(x.l, sid, x.i) || {}).pil || {}).forEach(o => { const m = dfPilMean(o); if (m != null) ps.push(m); }));
-  B.pilEl = ps.length ? Math.round(avg(ps) * 3 * 4) / 4 : null; B.pilElTxt = ps.length ? Math.round(avg(ps) * 100) + ' %' : '';
-  /* piliers évalués par l'enseignant /6 (dernière évaluation de chaque pilier) */
-  const last = {}; for (let l = 1; l <= S.settings.nbLessons; l++) { const P = dfPP(l, sid); if (P) DF_PIL.forEach(p => { if (P[p.id] != null) last[p.id] = P[p.id]; }); }
-  const pp = vals(DF_PIL.map(p => dfPilScore(p, last[p.id]))); B.pilProf = pp.length ? Math.round(avg(pp) * 6 * 4) / 4 : null; B.pilProfTxt = pp.length ? `${pp.length}/${DF_PIL.length} piliers` : '';
+  const FR = dfFilRouge(sid, X), FB = dfFilBleu(sid, X);
+  /* note proposée par l'appli, ajustée par le niveau final choisi par l'enseignant (onglet des fils) */
+  [['frInv', 'FR', FR], ['frPil', 'FM', FB]].forEach(([k, id, F]) => { const fr = CFG.filsRouges.find(x => x.id === id), C = fr ? frFinal(fr, sid) : null, a = dfFilAdj(F.v, C);
+    B[k] = a; B[k + 'Prop'] = F.v; B[k + 'Lv'] = C;
+    B[k + 'Txt'] = (id === 'FR' ? FR.short : FB.txt) + (C ? ` · niveau retenu : ${COMP_LV[C].n}${a !== F.v ? ` (proposé ${F.v == null ? '—' : fmtN(F.v, 2)})` : ''}` : ' · niveau final à choisir');
+    B[k + 'Det'] = (id === 'FR' ? FR.txt : FB.txt) + (C ? ` · niveau retenu : ${COMP_LV[C].n}` : ''); });
+  B.frCour = FR.cour; B.frObs = FR.obs;
   return B;
 }
-const DF_BLOCKS = [['afl1', 'AFL1 · 3 × 500 m', 12], ['bats', 'Bats tes perfs', 6], ['regInv', 'Régularité de l\'investissement', 2], ['qualInv', 'Qualité de l\'investissement', 3],
-  ['qualObs', 'Qualité des observations', 3], ['quantObs', 'Quantité des observations', 2], ['pilEl', 'Piliers (élèves)', 3], ['pilProf', 'Piliers (enseignant)', 6]];
+/* niveaux des fils ↔ note /6 : Insuffisante 0–1,5 · Fragile 1,5–3 · Satisfaisante 3–4,5 · Très bonne 4,5–6 */
+const DF_LVB = [null, [0, 1.5], [1.5, 3], [3, 4.5], [4.5, 6]];
+const dfLvOf6 = v => v == null ? null : v < 1.5 ? 1 : v < 3 ? 2 : v < 4.5 ? 3 : 4;
+function dfFilAdj(v, C){ if (!C) return v; const [lo, hi] = DF_LVB[C]; if (v == null) return dfQ((lo + hi) / 2); return v < lo ? lo : v > hi ? hi : v; }
+/* la proposition de l'appli (pelote, niveau proposé) vient de la note /6 */
+const dfFilProp = (fr, sid) => { const X = dfAllEx(); return fr.id === 'FR' ? dfFilRouge(sid, X).v : fr.id === 'FM' ? dfFilBleu(sid, X).v : undefined; };
+const _dfFrMoy = frMoy;
+frMoy = (fr, sid) => { const v = dfFilProp(fr, sid); if (v === undefined) return _dfFrMoy(fr, sid); return v == null ? null : Math.min(4.49, 0.5 + v / 1.5); };
+const _dfFrDetail = frDetailView;
+frDetailView = sid => _dfFrDetail(sid).replace(/ \(moyenne [^)]*\)/g, '')
+  + `<div class="card"><h3>Notes /6</h3>${FRS.map(fr => { const v = dfFilProp(fr, sid); if (v === undefined) return ''; const C = frFinal(fr, sid), a = dfFilAdj(v, C);
+    return `<p>${yarnIcon(fr, 18)} <b>${esc(fr.nom)}</b> : proposée <b>${v == null ? '—' : fmtN(v, 2)}/6</b>${v != null ? ` (${COMP_LV[dfLvOf6(v)].n})` : ''}${C ? ` → niveau retenu <b>${COMP_LV[C].n}</b> → note <b>${fmtN(a, 2)}/6</b>` : ' · choisissez le niveau final ci-dessus pour valider ou ajuster'}</p>`; }).join('')}
+    <p class="muted">Le niveau final est votre décision : la note reste celle proposée si elle est dans le niveau choisi, sinon elle est ramenée dans ce niveau (Insuffisante 0–1,5 · Fragile 1,5–3 · Satisfaisante 3–4,5 · Très bonne 4,5–6).</p></div>`;
+const DF_BLOCKS = [['afl1', 'AFL1 · 3 × 500 m', 12], ['bats', 'Bats tes perfs', 6], ['frInv', '🔴 Fil rouge · Investissement', 6], ['frPil', '🔵 Fil bleu · Piliers', 6]];
 function dfProfEval(){
-  return `<div class="card"><h3>📝 Évaluation par blocs</h3><p class="muted">Chaque bloc est affiché séparément (pas de total). Survolez ou touchez une case pour le détail. Les piliers de l'enseignant se notent dans 🎓 Piliers (enseignant).</p>
+  return `<div class="card"><h3>📝 Évaluation par blocs</h3><p class="muted">Chaque bloc est affiché séparément (pas de total). Survolez ou touchez une case pour le détail. <b>Fil rouge /6</b> = investissement comme coureur /3 (exercices sans abandon, cibles des fractionnés) + comme observateur /3 (observations faites, accord avec l'enseignant). <b>Fil bleu /6</b> = piliers techniques : notes de l'enseignant (2/3, 🎓 Piliers) et des observateurs (1/3).</p>
       <button class="btn primary" data-action="dfEvalXls">📊 Export Excel</button></div>
     <div class="card scroll-x"><table class="tbl"><thead><tr><th>Élève</th>${DF_BLOCKS.map(([, l, m]) => `<th>${esc(l)}<br><small>/${m}</small></th>`).join('')}</tr></thead><tbody>
-    ${sortedStudents().map(s => { const B = dfEvalBlocks(s.id); return `<tr><td class="nm">${band(s.id)}${esc(nameOf(s.id))}</td>${DF_BLOCKS.map(([k]) => `<td title="${esc(B[k + 'Txt'] || '')}"><b>${B[k] == null ? '—' : fmtN(B[k], 2)}</b>${B[k + 'Txt'] ? `<br><small>${esc(B[k + 'Txt'])}</small>` : ''}</td>`).join('')}</tr>`; }).join('')}</tbody></table></div>`;
+    ${sortedStudents().map(s => { const B = dfEvalBlocks(s.id); return `<tr><td class="nm">${band(s.id)}${esc(nameOf(s.id))}</td>${DF_BLOCKS.map(([k]) => `<td title="${esc(B[k + 'Det'] || B[k + 'Txt'] || '')}"><b>${B[k] == null ? '—' : fmtN(B[k], 2)}</b>${B[k + 'Txt'] ? `<br><small>${esc(B[k + 'Txt'])}</small>` : ''}</td>`).join('')}</tr>`; }).join('')}</tbody></table></div>`;
 }
 function dfEvalXls(){
   if (!window.XLSX) return toast('Bibliothèque Excel non chargée');
-  const rows = [['Nom', 'Prénom', ...DF_BLOCKS.flatMap(([, l, m]) => [`${l} /${m}`, `${l} (détail)`])], ...sortedStudents().map(s => { const B = dfEvalBlocks(s.id); return [s.nom || s.disp || '', s.prenom || '', ...DF_BLOCKS.flatMap(([k]) => [B[k] == null ? '' : B[k], B[k + 'Txt'] || ''])]; })];
+  const rows = [['Nom', 'Prénom', ...DF_BLOCKS.flatMap(([, l, m]) => [`${l} /${m}`, `${l} (détail)`])], ...sortedStudents().map(s => { const B = dfEvalBlocks(s.id); return [s.nom || s.disp || '', s.prenom || '', ...DF_BLOCKS.flatMap(([k]) => [B[k] == null ? '' : B[k], B[k + 'Det'] || B[k + 'Txt'] || ''])]; })];
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Évaluation');
   const dist = [['Nom', 'Prénom', ...Array.from({ length: S.settings.nbLessons }, (_, k) => 'L' + (k + 1) + ' (m)')], ...sortedStudents().map(s => [s.nom || s.disp || '', s.prenom || '', ...Array.from({ length: S.settings.nbLessons }, (_, k) => { const v = lessonVal(k + 1, s.id, fieldById('dist')); return v == null ? '' : Math.round(v); })])];
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(dist), 'Distances');
   XLSX.writeFile(wb, `${CFG.short} - évaluation - ${className()}.xlsx`.replace(/[\\/:*?"<>|]/g, '-'));
 }
 
-/* fil rouge investissement : exercices faits sans abandon et cibles des fractionnés */
+/* fils par leçon (nœuds de la pelote, niveaux 1 à 4) */
+const dfLv = v => v == null ? null : v >= 0.85 ? 4 : v >= 0.6 ? 3 : v >= 0.35 ? 2 : 1;
 window.DF_frInvest = function(n, sid){
   const E = dfExs(n); if (!E.length) return null; const xs = E.map((_, i) => dfX(n, sid, i)); if (!xs.some(Boolean)) return null;
-  const ab = xs.filter(x => x && x.ab).length, done = E.filter((_, i) => dfExDone(n, sid, i)).length, cells = [];
-  E.forEach((e, i) => { if (DF_FRAC(e.t)) dfFracCells(xs[i]).forEach(v => cells.push(v / 2)); });
+  const done = E.filter((_, i) => dfExDone(n, sid, i)).length, ab = xs.filter(x => x && x.ab).length;
   if (n === curLesson() && done + ab < E.length) return { lv: null, why: `en cours : ${done}/${E.length} exercices` };
-  let lv = ab ? (ab >= E.length ? 1 : 2) : done === E.length ? 3 : 2; if (lv === 3 && (!cells.length || avg(cells) >= 0.75)) lv = 4;
-  return { lv, why: `${done}/${E.length} exercices faits${ab ? ' · ' + ab + ' abandon(s)' : ''}${cells.length ? ' · cibles ' + Math.round(avg(cells) * 100) + ' %' : ''}` };
+  const X = E.map((e, i) => ({ l: n, i, e })), R = dfInvRunner(sid, X), O = dfInvObserver(sid, X);
+  const c = dfMean([R.reg, R.qual]), o = dfMean([O.quant, O.qual]), m = dfMean([c, o]);
+  return { lv: dfLv(m), why: `coureur : ${[R.regTxt, R.qualTxt].filter(Boolean).join(', ') || '—'}${O.quantTxt ? ` · observateur : ${[O.quantTxt, O.qualTxt].filter(Boolean).join(', ')}` : ''}` };
+};
+window.DF_frPil = function(n, sid){
+  const ps = []; dfExs(n).forEach((e, i) => Object.values((dfX(n, sid, i) || {}).pil || {}).forEach(o => { const m = dfPilMean(o); if (m != null) ps.push(m); }));
+  const P = dfPP(n, sid), pp = P ? vals(DF_PIL.map(p => dfPilScore(p, P[p.id]))) : [], el = ps.length ? avg(ps) : null, pr = pp.length ? avg(pp) : null;
+  if (el == null && pr == null) return null;
+  const m = el != null && pr != null ? (pr * 2 + el) / 3 : (pr ?? el);
+  return { lv: dfLv(m), why: `piliers ${Math.round(m * 100)} %${pr != null ? ' · enseignant ' + Math.round(pr * 100) + ' %' : ''}${el != null ? ' · observateurs ' + Math.round(el * 100) + ' %' : ''}` };
 };
 
 /* =====================================================================
@@ -368,3 +409,9 @@ document.addEventListener('change', e => {
   if (isFinite(v) && v > 0) S.params.vmaMan[sid] = r10(v, 1); else delete S.params.vmaMan[sid];
   save(); rerender(); toast('✓ VMA enregistrée · renvoyez le QR de la leçon');
 });
+
+/* Fils : notes /6 sous les pelotes */
+const _dfProfFil = profFilRouge;
+profFilRouge = () => _dfProfFil() + (FRS.length ? `<div class="card scroll-x"><h3>Notes des fils /6 <small class="muted">(détail dans 📝 Évaluation)</small></h3><table class="tbl"><thead><tr><th>Élève</th>${FRS.map(fr => `<th>${yarnIcon(fr, 16)} ${esc(fr.nom)}<br><small>/6</small></th>`).join('')}</tr></thead><tbody>
+  ${sortedStudents().filter(s => UI.frG == null || (s.grp || 0) === UI.frG).map(s => { const B = dfEvalBlocks(s.id), k = { FR: 'frInv', FM: 'frPil' };
+    return `<tr><td class="nm">${band(s.id)}${esc(nameOf(s.id))}</td>${FRS.map(fr => { const v = B[k[fr.id]]; return `<td title="${esc(B[k[fr.id] + 'Txt'] || '')}"><b>${v == null ? '—' : fmtN(v, 2)}</b>${B[k[fr.id] + 'Lv'] ? `<br><small>proposé ${B[k[fr.id] + 'Prop'] == null ? '—' : fmtN(B[k[fr.id] + 'Prop'], 2)} · ${COMP_LV[B[k[fr.id] + 'Lv']].n}</small>` : '<br><small class="muted">niveau final à choisir</small>'}</td>`; }).join('')}</tr>`; }).join('')}</tbody></table></div>` : '');

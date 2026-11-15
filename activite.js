@@ -13,7 +13,7 @@ window.APP_CONFIG = {
   author: 'Quentin Delisle',
   color: '#0B346E',                  // bleu marine de l'icône
   accent: '#F7941D',                 // orange de l'anneau
-  version: '2.1.0',
+  version: '2.2.0',
   url: '',
 
   mode: 'cycle',
@@ -45,9 +45,10 @@ window.APP_CONFIG = {
   filsRouges: [
     { id:'FR', nom:'Fil rouge · Investissement', actif:true, couleur:'#D0161B',
       regle:{ type:'fonction', calcul:(n, sid) => window.DF_frInvest ? window.DF_frInvest(n, sid) : null },
-      explication:'Exercices de la leçon faits sans abandon → satisfaisante ; et cibles des fractionnés atteintes à 75 % → très bonne ; un abandon → fragile ; tout abandonné → insuffisante.' },
-    { id:'FM', nom:'Fil bleu · Méthodo', actif:true, couleur:'#1E5FD8', regle:{ type:'echelle', champ:'met' },
-      explication:'Niveau d\'organisation donné par l\'observateur à chaque leçon (échauffement, récupérations, rôle tenu).' },
+      explication:'Noté sur 6 : investissement comme coureur /3 (exercices faits sans abandon, cibles des fractionnés atteintes) et comme observateur /3 (observations faites, accord avec l\'enseignant).' },
+    { id:'FM', nom:'Fil bleu · Piliers', actif:true, couleur:'#1E5FD8',
+      regle:{ type:'fonction', calcul:(n, sid) => window.DF_frPil ? window.DF_frPil(n, sid) : null },
+      explication:'Noté sur 6 : critères techniques observés (foulée, posture, bras, regard, gestion de l\'effort), notés par l\'enseignant (2/3) et par les observateurs (1/3).' },
   ],
 
   grade: { on:false, total:20, items:[] },   // évaluation par blocs : onglet 📝 Évaluation

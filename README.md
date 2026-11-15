@@ -1,6 +1,6 @@
 # Demi-fond N'EPS
 
-CA1 · Demi-fond · performance auto-référencée · Quentin Delisle · socle N'EPS 1.3.0 · **v2.1.0**
+CA1 · Demi-fond · performance auto-référencée · Quentin Delisle · socle N'EPS 1.3.0 · **v2.2.0**
 
 ## Fichiers
 
@@ -11,7 +11,7 @@ CA1 · Demi-fond · performance auto-référencée · Quentin Delisle · socle N
 | `df-exos.js` | écrans : test VMA (demi-Cooper ou VAMEVAL) / Bats tes perfs, course d'équipe, pelotons, fractionnés, évaluation 3 × 500 m |
 | `df-aventuriers.js`, `df-plateau.js`, `aventuriers/plateau_44.jpg`, `plateau_france.jpg`, `plateau_europe.jpg` | Les Aventuriers du … (plateau au choix : Loire-Atlantique, France, Europe) |
 | `df-prof.js` | espace enseignant : programmation, VMA, piliers enseignant, bilan, évaluation par blocs |
-| `df-fiches.js` | fiches 📖 des exercices (rédigées pour les élèves de seconde), classe de démonstration, styles |
+| `df-fiches.js` | fiches 📖 des exercices (rédigées pour les élèves de seconde ; fractionnés : schéma de la piste avec les plots de couleur calculés d'après la VMA des élèves), classe de démonstration, styles |
 | le reste | socle N'EPS (inchangé) |
 
 `specifique.js` (v1) n'est plus utilisé : il peut être supprimé du dépôt.
@@ -40,7 +40,7 @@ Tour impossible au-delà de 26 km/h. Demi-Cooper : un plot tous les ≈ 50 m, nu
 - **Pelotons /10 par course** : % de VMA (135 % et plus = 5, −0,5 par tranche de 5 %) + points du joker validé ; au-delà de 10, report sur la course suivante.
 - **Test VMA** : demi-Cooper (6 min, VMA = distance ÷ 100) ou VAMEVAL (paliers d'1 min, +0,5 km/h, un bip par plot ≈ 20 m ; VMA = dernier palier terminé), au choix dans la Programmation.
 - **Aventuriers** : plateau au choix ; 1 tronçon = distance réglée en mètres (par défaut 1 tour) ; trajets 1 → 1 pt, 2 → 2, 3 → 4, 4 → 7, 5 → 10 ; parcours relié = sa valeur (plus court chemin en tronçons) ; +10 plus de villes, +10 plus de parcours (égalité : le premier) ; trinômes × coefficient s'il y a aussi des binômes.
-- **Évaluation (blocs séparés)** : AFL1 3 × 500 m /12 (3 pts par course selon le % de VMA : 110 % = 3 · 105 = 2,5 · 100 = 2 · 95 = 1,5 · 90 = 1 · 85 = 0,5 ; régularité /3 : −0,5 par tranche de 4 s d'écart entre deux courses) · Bats tes perfs /6 · régularité de l'investissement /2 · qualité de l'investissement /3 · qualité des observations /3 · quantité des observations /2 · piliers élèves /3 · piliers enseignant /6.
+- **Évaluation (blocs séparés)** : AFL1 3 × 500 m /12 (3 pts par course selon le % de VMA : 110 % = 3 · 105 = 2,5 · 100 = 2 · 95 = 1,5 · 90 = 1 · 85 = 0,5 ; régularité /3 : −0,5 par tranche de 4 s d'écart entre deux courses) · Bats tes perfs /6 · 🔴 **Fil rouge · Investissement /6** = coureur /3 (exercices sans abandon, cibles des fractionnés) + observateur /3 (observations faites, accord avec l'enseignant) · 🔵 **Fil bleu · Piliers /6** = piliers notés par l'enseignant (2/3) et par les observateurs (1/3).
 
 ## Déroulement d'une leçon
 

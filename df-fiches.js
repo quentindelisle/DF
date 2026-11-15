@@ -53,16 +53,16 @@ const DF_FICHES = {
   fc: e => ({
     but:'Développer ta VMA avec des efforts courts et rapides (autour de ta VMA), séparés par des récupérations.',
     savoir:['Séance : ' + (e ? dfFracSummary(e) : 'efforts courts et récupérations') + '.', 'La tablette calcule ta cible à partir de ta VMA : un temps pour une distance, ou une distance pour un temps.', 'Si tu es en petite forme, tu le dis au début : ta cible baisse de 10 %.'],
-    deroul:['Échauffement progressif.', 'Lis ta cible sur la tablette avant chaque répétition.', 'Ton observateur note chaque répétition : ✓ cible atteinte, ≈ presque, ✗ non atteinte.', 'Il observe aussi un point technique de ta course (pilier de la leçon).'],
-    roles:['Coureur : atteindre sa cible à chaque répétition.', 'Observateur : noter les cibles et le pilier observé.', 'Chronométreur : départs et récupérations.'],
+    deroul:['Échauffement progressif.', 'Vous êtes en binôme : l\'un court, l\'autre observe. Vous échangez les rôles à chaque série (ou à la moitié de la séance).', 'Avant de partir, repère ton plot de couleur sur le schéma ci-dessus : c\'est ta cible.', 'Ton observateur note chaque répétition : ✓ cible atteinte, ≈ presque, ✗ non atteinte.', 'Il observe aussi un point technique de ta course (pilier de la leçon).'],
+    roles:['Coureur : atteindre sa cible à chaque répétition, ni trop tôt ni trop tard.', 'Observateur : regarder si ton camarade arrive à son plot au signal, noter ✓ / ≈ / ✗ et observer le pilier de la leçon.', 'Les deux rôles alternent : quand tu as couru, tu observes ton camarade.'],
     reussite:['J\'atteins ma cible à chaque répétition.', 'Ma dernière répétition est aussi bonne que la première.'],
     secu:['Je respecte les récupérations.', 'Je m\'arrête si j\'ai mal.'],
     prep:['Retrouve ta VMA et calcule la distance que tu dois courir en 30 s à 100 % de ta VMA (VMA ÷ 3,6 × 30).', 'Relis le pilier observé de la leçon : que va regarder ton observateur ?'] }),
   fl: e => ({
     but:'Développer ton endurance à haute intensité (80 à 90 % de ta VMA) sur des efforts longs.',
     savoir:['Séance : ' + (e ? dfFracSummary(e) : 'efforts longs et récupérations actives') + '.', 'L\'allure doit être tenue du début à la fin de chaque effort : c\'est un travail de régularité.'],
-    deroul:['Échauffement progressif.', 'Lis ta cible (temps ou distance) sur la tablette.', 'Entre les efforts, tu trottines doucement (récupération active), sans t\'arrêter.', 'Ton observateur note ✓ / ≈ / ✗ et le pilier observé.'],
-    roles:['Coureur', 'Observateur', 'Chronométreur'],
+    deroul:['Échauffement progressif.', 'Vous êtes en binôme : l\'un court, l\'autre observe, puis vous échangez.', 'Avant de partir, repère ta cible sur le schéma ci-dessus (plot de couleur ou temps à réaliser).', 'Entre les efforts, tu trottines doucement (récupération active), sans t\'arrêter.', 'Ton observateur note ✓ / ≈ / ✗ et le pilier observé.'],
+    roles:['Coureur : tenir son allure cible du début à la fin de l\'effort.', 'Observateur : vérifier l\'allure (cible atteinte ou non) et observer le pilier de la leçon.', 'Les deux rôles alternent : quand tu as couru, tu observes ton camarade.'],
     reussite:['Mon allure est régulière pendant tout l\'effort.', 'Je récupère en trottinant, sans m\'arrêter.'],
     secu:['Je bois pendant la séance.', 'Petite forme : cible baissée de 10 %, je le signale.'],
     prep:['Calcule ton allure à 85 % de ta VMA (VMA × 0,85).', 'Combien de temps pour 1 000 m à cette allure ?'] }),
@@ -75,6 +75,52 @@ const DF_FICHES = {
     secu:['Récupération active entre les courses.', 'Je bois.'],
     prep:['Calcule ton temps sur ' + (dfFx(e).d || 500) + ' m à 100 % et à 105 % de ta VMA.', 'Décide de ta stratégie : quel temps vises-tu à chaque course ?'] }),
 };
+/* ---------- Schéma du fractionné : plots de couleur selon la VMA des élèves ---------- */
+const DF_CONES = [{ n:'rouge', c:'#E3262B' }, { n:'bleu', c:'#1E5FD8' }, { n:'jaune', c:'#FFD400' }, { n:'vert', c:'#1FA24A' }, { n:'orange', c:'#FF7A00' }, { n:'blanc', c:'#FFFFFF' }];
+function dfFracGroups(n, i){
+  const L = sortedStudents().filter(s => dfPresent(n, s.id)).map(s => ({ id: s.id, v: dfVmaFor(n, s.id, i) })).filter(x => x.v > 0);
+  if (!L.length) return { ex: true, G: [10, 12, 14, 16].map(v => ({ v, ids: [] })) };
+  let w = 1; const key = v => Math.round(v / w) * w; while (new Set(L.map(x => key(x.v))).size > DF_CONES.length) w++;
+  const M = {}; L.forEach(x => (M[key(x.v)] = M[key(x.v)] || []).push(x.id));
+  return { ex: false, w, G: Object.keys(M).map(Number).sort((a, b) => a - b).map(v => ({ v, ids: M[v] })) };
+}
+function dfFracSchema(n, i, e){
+  const P = dfPiste(), lap = dfLap(), R = dfReps(e), r0 = R[0], tps = e.mode !== 'dist', { ex, w, G } = dfFracGroups(n, i);
+  const r5 = d => Math.round(d / 5) * 5, dfT = s => { s = Math.round(s); const m = Math.floor(s / 60), r = s % 60; return m ? `${m} min${r ? ' ' + String(r).padStart(2, '0') + ' s' : ''}` : `${r} s`; };   // temps en langage simple
+  const rows = G.map((g, k) => ({ ...g, col: DF_CONES[k % DF_CONES.length], d: tps ? r5(dfDist(r0, g.v, e.pct)) : r0, t: tps ? r0 : dfTime(r0, g.v, e.pct) }));
+  const where = d => { if (P.mode === 'couloir') { const q = d % (2 * P.L); return q <= P.L ? '' : ' (après le demi-tour)'; } return d >= lap ? ` (1 tour + ${fmtN(d - lap, 0)} m)` : ''; };
+  /* schéma de la piste */
+  const cone = (x, y, c) => `<path d="M${x - 11} ${y + 9} L${x} ${y - 13} L${x + 11} ${y + 9}z" fill="${c}" stroke="#0B346E" stroke-width="2.5"/>`;
+  let svg;
+  if (P.mode === 'couloir') {
+    const x0 = 40, x1 = 480, px = d => { const q = d % (2 * P.L); return x0 + (x1 - x0) * (q <= P.L ? q : 2 * P.L - q) / P.L; };
+    svg = `<svg viewBox="0 0 520 190" class="df-svg"><rect x="20" y="60" width="480" height="70" rx="12" fill="#D9774F"/><line x1="20" x2="500" y1="95" y2="95" stroke="#fff" stroke-width="3" stroke-dasharray="10 8"/>
+      <line x1="${x0}" x2="${x0}" y1="52" y2="138" stroke="#0B346E" stroke-width="5"/><text x="${x0}" y="44" text-anchor="middle" font-size="14" font-weight="800" fill="#0B346E">Départ</text>
+      <text x="${x1}" y="44" text-anchor="end" font-size="14" font-weight="800" fill="#0B346E">Demi-tour · ${P.L} m</text>
+      ${tps ? rows.map((r, k) => cone(px(r.d), 95 + (k % 2 ? 22 : -22), r.col.c)).join('') : cone(px(r0), 95, '#FF7A00') + `<text x="${px(r0)}" y="160" text-anchor="middle" font-size="13" font-weight="900" fill="#0B346E">Arrivée · ${fmtN(r0, 0)} m${where(r0)}</text>`}<text x="260" y="175" text-anchor="middle" font-size="13" font-weight="700" fill="#0B346E">→ sens de course</text></svg>`;
+  } else {
+    const cx = 260, cy = 115, rx = 205, ry = 82, pt = (d, o = 0) => { const a = Math.PI / 2 - 2 * Math.PI * (d % lap) / lap; return [cx + (rx + o) * Math.cos(a), cy + (ry + o) * Math.sin(a)]; };
+    svg = `<svg viewBox="0 0 520 252" class="df-svg"><ellipse cx="${cx}" cy="${cy}" rx="${rx + 20}" ry="${ry + 20}" fill="#D9774F"/><ellipse cx="${cx}" cy="${cy}" rx="${rx - 20}" ry="${ry - 20}" fill="#7CC37A"/>
+      <ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="none" stroke="#fff" stroke-width="2" stroke-dasharray="8 6"/>
+      <line x1="${cx}" x2="${cx}" y1="${cy + ry - 24}" y2="${cy + ry + 24}" stroke="#0B346E" stroke-width="6"/><text x="${cx}" y="${cy + ry + 42}" text-anchor="middle" font-size="14" font-weight="900" fill="#0B346E">DÉPART</text>
+      <text x="${cx}" y="${cy + 6}" text-anchor="middle" font-size="17" font-weight="900" fill="#0B346E">Piste de ${lap} m</text><text x="${cx}" y="${cy + 26}" text-anchor="middle" font-size="13" font-weight="700" fill="#0B346E">sens de course ↺</text>
+      ${tps ? rows.map((r, k) => { const [x, y] = pt(r.d, k % 2 ? 8 : -8); return cone(x, y, r.col.c); }).join('') : (() => { const [x, y] = pt(r0); const [lx, ly] = pt(r0, -42); return cone(x, y, '#FF7A00') + `<text x="${lx}" y="${ly + 5}" text-anchor="middle" font-size="13" font-weight="900" fill="#0B346E">Arrivée · ${fmtN(r0, 0)} m</text>`; })()}</svg>`;
+  }
+  const rec = e.rec.type === 'active' ? `tu trottines doucement pendant ${e.rec.unite === 'dist' ? fmtN(e.rec.val, 0) + ' m' : dfT(e.rec.val)}` : `tu récupères ${e.rec.unite === 'dist' ? fmtN(e.rec.val, 0) + ' m' : dfT(e.rec.val)} sur place (debout, en marchant doucement)`;
+  const nb = `${R.length} répétition${R.length > 1 ? 's' : ''}${e.series > 1 ? ` × ${e.series} séries (${dfT(e.recS)} de repos entre les séries)` : ''}`;
+  const pyr = e.steps && e.steps.length ? `<p class="muted">Pyramide : ${R.map(v => tps ? dfT(v) : fmtN(v, 0) + ' m').join(' - ')}. Le schéma montre la 1<sup>re</sup> répétition ; le tableau donne ta cible pour chaque répétition.</p>` : '';
+  const expl = tps
+    ? [`Au signal, tu cours <b>${dfT(r0)}</b> : tu dois arriver à <b>ton plot de couleur</b> juste au signal suivant.`, `Ta couleur dépend de ta VMA : trouve ton prénom dans le tableau.`, `Puis ${rec}.`, `À la répétition suivante, tu repars de ton plot vers la ligne de départ (même distance, dans l'autre sens).`, `En tout : ${nb}.`]
+    : [`Tu cours <b>${fmtN(r0, 0)} m</b> (jusqu'au plot d'arrivée) et tu dois arriver <b>en ton temps cible</b> : trouve ton prénom dans le tableau.`, `Arrivé trop tôt ? Tu es parti trop vite. Trop tard ? Accélère à la prochaine.`, `Puis ${rec}.`, `En tout : ${nb}.`];
+  expl.push('En petite forme ? Préviens ton professeur : tu viseras la cible de la couleur juste en dessous de la tienne.');
+  const stepCols = e.steps && e.steps.length ? R : null;
+  return `<div class="df-fschema"><h3>🗺️ Ce que tu vas faire en arrivant · ${esc(e.forme || dfFracSummary(e))}</h3>${svg}
+    <ul>${expl.map(x => `<li>${x}</li>`).join('')}</ul>${pyr}
+    <div class="scroll-x"><table class="tbl"><thead><tr><th>${tps ? 'Ma cible' : 'Mon groupe'}</th><th>VMA</th>${stepCols ? stepCols.map((v, k) => `<th>Rép. ${k + 1}<br><small>${tps ? dfT(v) : fmtN(v, 0) + ' m'}</small></th>`).join('') : `<th>${tps ? `Distance en ${dfT(r0)}` : `Temps pour ${fmtN(r0, 0)} m`}</th>`}${ex ? '' : '<th>Élèves</th>'}</tr></thead><tbody>
+      ${rows.map(r => `<tr><td><span class="df-cone" style="--cc:${r.col.c}"></span> ${tps ? `plot <b>${r.col.n}</b>` : `<b>${r.col.n}</b>`}</td><td>${ex || w === 1 ? fmtN(r.v, 0) : `${fmtN(r.v - w / 2, 1)} à ${fmtN(r.v + w / 2, 1)}`} km/h</td>
+        ${stepCols ? stepCols.map(v => `<td><b>${tps ? fmtN(r5(dfDist(v, r.v, e.pct)), 0) + ' m' : dfT(dfTime(v, r.v, e.pct))}</b></td>`).join('') : `<td><b>${tps ? fmtN(r.d, 0) + ' m' + where(r.d) : dfT(r.t)}</b></td>`}${ex ? '' : `<td><small>${r.ids.map(id => esc(nameOf(id))).join(', ')}</small></td>`}</tr>`).join('')}</tbody></table></div>
+    <p class="muted">${ex ? 'Exemples (les VMA de la classe ne sont pas encore connues).' : `Calculé avec ta VMA de référence, à ${e.pct} % de VMA.`} Distances arrondies à 5 m.</p></div>`;
+}
 function dfFiche(t, n, i){
   const e = n != null && i != null ? dfEx(n, i) : null, Fn = DF_FICHES[t], X = DFX[t]; if (!Fn) return;
   const F = Fn(e), li = a => `<ul>${a.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
@@ -82,6 +128,7 @@ function dfFiche(t, n, i){
   if (t === 'aventuriers') titre = dfBoardName(e);
   if (DF_TEST(t)) titre = `${X.n} · ${DF_PROTO[dfProto(e)].n}`;
   if (t === 'aventuriers') extra += `<div class="df-map small">${dfAvSVG(e)}</div>`;
+  if (DF_FRAC(t) && e) extra += dfFracSchema(n, i, e);
   if (t === 'pelotons') extra += `<p><b>Les jokers :</b></p>${li(dfJoks().map(j => `${j.l} · ${j.p === 'n' ? '1 pt par coureur doublé' : j.p + ' pts'}`))}`;
   modal(`<h2>📖 ${X.ico} ${esc(titre)}</h2><p class="muted">Fiche élève · à lire avant la leçon</p>${extra}
     <h3>🎯 Le but</h3><p>${esc(F.but)}</p><h3>💡 Ce qu'il faut savoir</h3>${li(F.savoir)}<h3>▶️ Comment ça se passe</h3><ol>${F.deroul.map(x => `<li>${esc(x)}</li>`).join('')}</ol>
@@ -178,6 +225,8 @@ tr.abd{opacity:.5}
 .df-tsel{border:4px solid var(--tc);background:#fff;border-radius:14px;padding:10px 8px;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--ink);min-height:64px}
 .df-tsel b{font-size:18px}.df-tsel small{font-size:12px;color:var(--grey);font-weight:700;text-align:center}
 .df-tsel.on{background:var(--tc);color:#fff;box-shadow:0 0 0 4px rgba(0,0,0,.15)}.df-tsel.on b,.df-tsel.on small{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.45)}
+.df-fschema{border:3px solid var(--navy);border-radius:16px;padding:10px 14px;margin:10px 0;background:#F6FAFF}.df-fschema h3{margin-top:4px}
+.df-cone{display:inline-block;width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:18px solid var(--cc);filter:drop-shadow(0 0 1px #0B346E);vertical-align:-3px}
 .df-vamnow{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;font-size:18px;border-color:var(--navy)}
 .tile.df-stopped{background:#EAF2FB}
 .df-timer b{font-size:clamp(34px,6vw,56px)}

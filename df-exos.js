@@ -128,7 +128,7 @@ function dfPisteSVG(mode, L, opts = {}){
       ${plots.filter(p => p.d <= L + 0.05).map(p => `<g><path d="M${px(p.d) - 9} 178 L${px(p.d)} 160 L${px(p.d) + 9} 178z" fill="#F7941D" stroke="#0B346E" stroke-width="2"/><text x="${px(p.d)}" y="198" text-anchor="middle" font-size="13" font-weight="800" fill="#0B346E">${fmtN(p.d, 0)}</text></g>`).join('')}
       <text x="260" y="20" text-anchor="middle" font-size="15" font-weight="800" fill="#0B346E">Couloir en aller-retour · 1 tour = ${2 * L} m</text></svg>`;
   }
-  const cx = 260, cy = 110, rx = 210, ry = 85, lap = L, pt = d => { const a = Math.PI / 2 + 2 * Math.PI * d / lap; return [cx + rx * Math.cos(a), cy + ry * Math.sin(a)]; };
+  const cx = 260, cy = 110, rx = 210, ry = 85, lap = L, pt = d => { const a = Math.PI / 2 - 2 * Math.PI * d / lap; return [cx + rx * Math.cos(a), cy + ry * Math.sin(a)]; };
   return `<svg viewBox="0 0 ${W} ${H}" class="df-svg"><ellipse cx="${cx}" cy="${cy}" rx="${rx + 18}" ry="${ry + 18}" fill="#D9774F"/><ellipse cx="${cx}" cy="${cy}" rx="${rx - 18}" ry="${ry - 18}" fill="#7CC37A"/>
     <ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="none" stroke="#fff" stroke-width="2" stroke-dasharray="8 6"/>
     <line x1="${cx}" x2="${cx}" y1="${cy + ry - 22}" y2="${cy + ry + 22}" stroke="#0B346E" stroke-width="5"/>

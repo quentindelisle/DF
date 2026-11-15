@@ -189,8 +189,8 @@ function dfPilScore(p, v){
 function dfPilMean(o){ if (!o) return null; const a = vals(DF_PIL.map(p => dfPilScore(p, o[p.id]))); return a.length ? avg(a) : null; }
 /* formulaire d'un pilier (data-action = action ; attrs = data-… communs) */
 /* piliers observés pendant la leçon n (réglés dans la Programmation des leçons) */
-function dfLessonPil(n){ const a = dfCyc(n).pil; return a && a.length ? a : DF_PIL.map(p => p.id); }
-const dfPilNames = ids => ids.map(id => (DF_PIL.find(p => p.id === id) || {}).n).filter(Boolean).join(', ');
+function dfLessonPil(n){ const a = dfCyc(n).pil; return Array.isArray(a) ? a : DF_PIL.map(p => p.id); }   // [] = aucun pilier dans la leçon
+const dfPilNames = ids => ids.length ? ids.map(id => (DF_PIL.find(p => p.id === id) || {}).n).filter(Boolean).join(', ') : 'aucun (pas d\'observation de pilier dans cette leçon)';
 function dfPilForm(o, action, attrs, ids){
   o = o || {};
   return DF_PIL.filter(p => !ids || ids.includes(p.id)).map(p => { const m = dfPilMode(p), v = o[p.id];

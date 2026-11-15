@@ -319,6 +319,7 @@ viewSaisie = function(){
   const n = curLesson(), E = dfExs(n);
   return `<div class="card strong"><h3 style="margin:0 0 8px">${esc(lessonLabel(n))}</h3><p class="df-pilfocus">🎯 Pilier${dfLessonPil(n).length > 1 ? 's' : ''} de la leçon : ${esc(dfPilNames(dfLessonPil(n)))}</p><div class="df-exgrid">${E.map((e, i) => `<button class="df-exbtn" style="--xc:${DFX[e.t].c}" data-action="dfOpen" data-i="${i}">
       <span class="ico">${DFX[e.t].ico}</span><b>${i + 1}. ${esc(DFX[e.t].n)}</b><small>${esc(dfExSummary(e))}</small></button>`).join('') || '<p class="muted">Aucun exercice programmé.</p>'}</div></div>
+    <div class="btn-row" style="margin:10px 0"><button class="btn" data-action="dfEvalFiche">📝 Comment je suis évalué·e</button></div>
     <h3 class="df-sub">👤 Fiches élèves <small class="muted">(abandons, méthode, observateur)</small></h3>` + _dfViewSaisie();
 };
 /* fiche d'un élève pour la leçon */

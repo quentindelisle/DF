@@ -8,7 +8,7 @@
 /* ---------- Équipes / séries : composition (enregistrée dans l'exercice, sinon proposée) ---------- */
 const dfVmaFor = (n, sid, i) => { const r = dfVmaRef(n, sid, i); return r ? r.v : null; };
 function dfPropose(n, i, e, mode, nb){
-  const L = sortedStudents().filter(s => dfPresent(n, s.id)).map(s => ({ id: s.id, v: dfVmaFor(n, s.id, i) }));
+  const L = sortedStudents().filter(s => dfPresent(n, s.id) && dfConc(e, s.id)).map(s => ({ id: s.id, v: dfVmaFor(n, s.id, i) }));
   const known = L.filter(x => x.v != null).map(x => x.v).sort((a, b) => a - b), med = known.length ? known[Math.floor(known.length / 2)] : 12;
   L.forEach(x => { if (x.v == null) x.v = med; });
   nb = Math.max(1, Math.min(nb, L.length || 1)); const out = {};
@@ -21,16 +21,16 @@ function dfPropose(n, i, e, mode, nb){
   } else { L.sort((a, b) => b.v - a.v); L.forEach((x, k) => { const r = Math.floor(k / nb), c = k % nb; out[x.id] = r % 2 ? nb - 1 - c : c; }); }   // équilibrées (serpentin)
   return out;
 }
-const dfNbTeams = (n, e) => e.t === 'aventuriers' ? Math.max(1, Math.floor(sortedStudents().filter(s => dfPresent(n, s.id)).length / (e.taille || 2))) : e.t === 'pelotons' ? e.ns : e.nbEq;
+const dfNbTeams = (n, e) => DF_GRPT(e.t) ? dfNbG(e) : e.t === 'aventuriers' ? Math.max(1, Math.floor(sortedStudents().filter(s => dfPresent(n, s.id) && dfConc(e, s.id)).length / (e.taille || 2))) : e.t === 'pelotons' ? e.ns : e.nbEq;
 function dfTeams(n, i, e){
-  if (e.eq && Object.keys(e.eq).length) return e.eq;
-  const m = e.t === 'pelotons' ? 'proche' : (e.form === 'libre' ? 'equi' : e.form) || 'equi';
+  if (e.eq && Object.keys(e.eq).length) return dfWho(e) ? Object.fromEntries(Object.entries(e.eq).filter(([sid]) => dfConc(e, sid))) : e.eq;
+  const m = e.t === 'pelotons' ? 'proche' : (e.form === 'libre' ? 'equi' : e.form) || (DF_FRAC(e.t) ? 'proche' : 'equi');
   return dfPropose(n, i, e, m === 'alea' ? 'equi' : m, dfNbTeams(n, e));    // repli sans hasard : identique sur toutes les tablettes
 }
 const dfTeamOf = (n, i, e, sid) => dfTeams(n, i, e)[sid];
 const DF_TCOL = COLORS.filter(c => c.k !== 'blanc');
 const dfTeamCol = t => DF_TCOL[t % DF_TCOL.length];
-const dfTeamName = (e, t) => `${e.t === 'pelotons' ? 'Série' : e.t === 'aventuriers' ? (e.taille === 3 ? 'Trinôme' : 'Binôme') : 'Équipe'} ${dfTeamCol(t).n}`;
+const dfTeamName = (e, t) => `${e.t === 'pelotons' ? 'Série' : e.t === 'aventuriers' ? (e.taille === 3 ? 'Trinôme' : 'Binôme') : DF_GRPT(e.t) ? 'Groupe' : 'Équipe'} ${dfTeamCol(t).n}`;
 function dfTabChips(e){
   const nb = e.tabs || 1; if (nb < 2) return '';
   const cur = Math.min(ROOT.dfTab || 0, nb - 1);
@@ -52,8 +52,8 @@ function dfPlotPos(k){
 }
 function dfTestView(n, i, e){
   if (dfProto(e) === 'vameval') return dfVamView(n, i, e);
-  const key = `t${n}-${i}`, list = dfGroupList().filter(s => dfPresent(n, s.id)), sel = UI.dfSel || [], st = dfPlotStep();
-  let h = `${groupChips(ROOT.grp != null && ROOT.grp < nbGroups() ? ROOT.grp : null)}
+  const key = `t${n}-${i}`, list = dfExList(n, i, e), sel = UI.dfSel || [], st = dfPlotStep();
+  let h = `${dfGrpChips(n, i, e)}
     <div class="card df-setup"><b>📐 Mise en place :</b> ${dfPiste().mode === 'couloir' ? `couloir de ${dfPiste().L} m en aller-retour` : `piste de ${dfLap()} m`}, un plot tous les ${fmtN(st, 0)} m, numérotés en continu (plot n = n × ${fmtN(st, 0)} m).
       <button class="btn small" data-action="dfPlotsGuide" data-n="${n}" data-i="${i}">📍 Placement des plots</button></div>
     ${dfTimerHTML(key, [{ n:'Demi-Cooper · temps restant', s: e.dur || 360 }])}
@@ -78,10 +78,10 @@ function dfVamTimer(n, i, e){
   return Array.from({ length: DF_VAMN }, (_, k) => ({ n: `Palier ${k + 1} · ${fmtN(dfVamV(k, v0), 1)} km/h`, s: 60 }));
 }
 function dfVamView(n, i, e){
-  const key = `t${n}-${i}`, list = dfGroupList().filter(s => dfPresent(n, s.id)), sel = UI.dfSel || [], v0 = e.v0 || 8, step = dfVamStep();
+  const key = `t${n}-${i}`, list = dfExList(n, i, e), sel = UI.dfSel || [], v0 = e.v0 || 8, step = dfVamStep();
   const ph = dfVamTimer(n, i, e), T = dfTimer(key), st = dfVamAt(dfTNow(T), v0), started = T.run || T.acc > 0;
   const speeds = Array.from({ length: 27 }, (_, k) => r10(v0 - 0.5 + 0.5 * k, 1)).filter(v => v >= 6);
-  let h = `${groupChips(ROOT.grp != null && ROOT.grp < nbGroups() ? ROOT.grp : null)}
+  let h = `${dfGrpChips(n, i, e)}
     <div class="card df-setup"><b>📐 Mise en place :</b> ${dfPiste().mode === 'couloir' ? `couloir de ${dfPiste().L} m en aller-retour` : `piste de ${dfLap()} m`}, un plot tous les <b>${fmtN(step, 1)} m</b>. Un bip = un plot à atteindre ; double bip = palier suivant (+0,5 km/h).
       <button class="btn small" data-action="dfPlotsGuide" data-n="${n}" data-i="${i}">📍 Placement des plots</button></div>
     ${dfTimerHTML(key, ph)}
@@ -255,14 +255,15 @@ function dfFracPhases(e){
   return P;
 }
 /* passages : série × groupe (Série 1 · Rouge, Série 1 · Bleu, Série 2 · Rouge…) */
-function dfFracPassages(n, e){
-  const G = nbGroups() > 1 ? Array.from({ length: nbGroups() }, (_, g) => g).filter(g => sortedStudents().some(s => (s.grp || 0) === g && dfPresent(n, s.id))) : [null], P = [];
-  for (let s = 0; s < (e.series || 1); s++) G.forEach(g => P.push({ s, g }));
+function dfFracPassages(n, i, e){
+  const T = dfNbG(e) > 1 ? dfTeams(n, i, e) : null;
+  const G = T ? Array.from({ length: dfNbG(e) }, (_, g) => g).filter(g => sortedStudents().some(s => T[s.id] === g && dfPresent(n, s.id))) : [null], P = [];
+  for (let s = 0; s < (e.series || 1); s++) G.forEach(g => P.push({ s, g, T }));
   return P;
 }
-const dfPassName = (e, p) => `Série ${p.s + 1}${p.g != null ? ' · ' + groupColor(p.g).n : ''}`;
-const dfPassList = (n, p) => sortedStudents().filter(s => dfPresent(n, s.id) && (p.g == null || (s.grp || 0) === p.g));
-function dfPassDone(n, i, e, p){ const L = dfPassList(n, p).filter(s => !(dfX(n, s.id, i) || {}).ab), K = dfReps(e).length;
+const dfPassName = (e, p) => `Série ${p.s + 1}${p.g != null ? ' · ' + dfTeamCol(p.g).n : ''}`;
+const dfPassList = (n, p, e) => sortedStudents().filter(s => dfPresent(n, s.id) && (!e || dfConc(e, s.id)) && (p.g == null || (p.T && p.T[s.id] === p.g)));
+function dfPassDone(n, i, e, p){ const L = dfPassList(n, p, e).filter(s => !(dfX(n, s.id, i) || {}).ab), K = dfReps(e).length;
   return L.length > 0 && L.every(s => ((((dfX(n, s.id, i) || {}).r || [])[p.s]) || []).filter(v => v != null).length >= K); }
 /* clé des piliers selon le réglage : fin d'exercice, fin de chaque série, chaque répétition */
 const dfPilKeyOf = (e, s, k) => e.pil === 'rep' ? `s${s}r${k ?? 0}` : e.pil === 'serie' ? `s${s}` : 'fin';
@@ -272,19 +273,19 @@ function dfFracPhasesS(e, s){
   return P;
 }
 function dfFracView(n, i, e){
-  const R = dfReps(e), PS = dfFracPassages(n, e), all = UI.dfFp === 'all' && UI.dfFpK === `${n}-${i}`;
+  const R = dfReps(e), PS = dfFracPassages(n, i, e), all = UI.dfFp === 'all' && UI.dfFpK === `${n}-${i}`;
   let pi = UI.dfFpK === `${n}-${i}` && typeof UI.dfFp === 'number' && UI.dfFp < PS.length ? UI.dfFp : -1;
   if (!all && pi < 0) { pi = PS.findIndex(p => !dfPassDone(n, i, e, p)); if (pi < 0) pi = 0; }
   const P = all ? null : PS[pi], cols = [];
   for (let s = 0; s < (e.series || 1); s++) if (all || s === P.s) R.forEach((v, k) => cols.push({ s, k }));
-  const list = all ? dfGroupList().filter(s => dfPresent(n, s.id)) : dfPassList(n, P);
+  const list = all ? dfExList(n, i, e) : dfPassList(n, P, e);
   const key = all ? `f${n}-${i}` : `f${n}-${i}-s${P.s}-g${P.g ?? 'x'}`, ph = all ? dfFracPhases(e) : dfFracPhasesS(e, P.s);
-  const pc = p => p.g != null ? groupColor(p.g).c : '#0B346E', nx = !all && PS[pi + 1];
+  const pc = p => p.g != null ? dfTeamCol(p.g).c : '#0B346E', nx = !all && PS[pi + 1];
   const pilTxt = !dfLessonPil(n).length ? '' : e.pil === 'rep' ? 'Piliers : à chaque répétition.' : e.pil === 'serie' ? 'Piliers : à la fin de chaque série (👀).' : 'Piliers : une fois, en fin d\'exercice.';
   let h = `<div class="filters df-pass"><b>Passage :</b>${PS.map((p, q) => `<button class="chip ${!all && q === pi ? 'on' : ''}" style="--pc:${pc(p)}" data-action="dfFp" data-k="${n}-${i}" data-p="${q}"><span class="dot" style="background:${pc(p)}"></span>${esc(dfPassName(e, p))}${dfPassDone(n, i, e, p) ? ' ✓' : ''}</button>`).join('')}
       <button class="chip ${all ? 'on' : ''}" data-action="dfFp" data-k="${n}-${i}" data-p="all">▦ Tout voir</button></div>
-    ${all ? groupChips(ROOT.grp != null && ROOT.grp < nbGroups() ? ROOT.grp : null) : ''}
-    ${e.mode === 'temps' ? dfTimerHTML(key, ph, { color: all ? null : (P.g != null ? groupColor(P.g).c : null) }) : e.rec.unite === 'temps' ? dfTimerHTML(key, [{ n:'Récupération', s: e.rec.val }]) : ''}
+    ${all ? dfGrpChips(n, i, e) : ''}
+    ${e.mode === 'temps' ? dfTimerHTML(key, ph, { color: all ? null : (P.g != null ? dfTeamCol(P.g).c : null) }) : e.rec.unite === 'temps' ? dfTimerHTML(key, [{ n:'Récupération', s: e.rec.val }]) : ''}
     <p class="muted">${all ? '' : `<b>${esc(dfPassName(e, P))}</b> : ${list.length} coureur(s). `}Cible de chaque coureur d'après sa VMA (😓 = petite forme, −10 % de VMA). Touchez une case après chaque répétition : ✓ cible atteinte · ≈ presque · ✗ non atteinte. ${pilTxt}</p>
     <div class="card scroll-x"><table class="tbl df-mat"><thead><tr><th>Coureur</th>${cols.map(c => `<th>${e.series > 1 ? 'S' + (c.s + 1) + '·' : ''}${c.k + 1}<br><small>${e.mode === 'dist' ? fmtN(R[c.k], 0) + ' m' : dfT(R[c.k])}</small></th>`).join('')}<th>👀</th><th>🚩</th></tr></thead><tbody>
     ${list.map(st => { const sid = st.id, x = dfX(n, sid, i) || {}, ref = dfVmaRef(n, sid, i), fo = dfForme(n, sid), pk = all ? null : dfPilKeyOf(e, P.s), np = all || e.pil === 'fin' || e.pil === 'rep' ? Object.keys(x.pil || {}).length : (dfPilMean((x.pil || {})[pk]) != null ? '✓' : 0);
@@ -304,8 +305,8 @@ DF_LINE.fc = DF_LINE.fl = (n, sid, i, e) => { const x = dfX(n, sid, i); if (!x) 
 /* Piliers d'un coureur (observateur), pour un exercice */
 function dfPilModal(n, sid, i){
   const e = dfEx(n, i), x = dfX(n, sid, i) || {}, keys = e.pil === 'rep' ? (() => { const a = []; for (let s = 0; s < (e.series || 1); s++) dfReps(e).forEach((_, k) => a.push(`s${s}r${k}`)); return a; })() : e.pil === 'serie' ? Array.from({ length: e.series || 1 }, (_, s) => `s${s}`) : ['fin'];
-  const key = UI.dfPk && keys.includes(UI.dfPk) ? UI.dfPk : keys[0], o = (x.pil || {})[key] || {}, g = student(sid)?.grp || 0;
-  const mates = sortedStudents().filter(s => s.id !== sid && dfPresent(n, s.id) && (e.t === 'eval' || nbGroups() < 2 || (s.grp || 0) === g));
+  const key = UI.dfPk && keys.includes(UI.dfPk) ? UI.dfPk : keys[0], o = (x.pil || {})[key] || {};
+  const mates = sortedStudents().filter(s => s.id !== sid && dfPresent(n, s.id));
   const m = modal(`<h2>👀 Piliers de ${esc(nameOf(sid))}</h2>
     ${keys.length > 1 ? `<div class="lchips"><b>Passage</b>${keys.map(k => `<button class="chip ${k === key ? 'on' : ''}" data-pk="${k}">${k.replace(/^s(\d+)$/, (z, a) => 'Fin de la série ' + (+a + 1)).replace(/s(\d+)r(\d+)/, (z, a, b) => (e.series > 1 ? 'S' + (+a + 1) + '·' : '') + (+b + 1))}</button>`).join('')}</div>` : ''}
     <div class="lchips"><b>Observateur</b>${mates.map(s => `<button class="chip ${o.by === s.id ? 'on' : ''}" data-by="${s.id}">${esc(nameOf(s.id))}</button>`).join('')}</div>
@@ -331,9 +332,9 @@ function dfEvScore(n, sid, i, e){
   return { t, pts, reg, ref, total: done ? pts.reduce((a, b) => a + b, 0) * (3 * 3 / (3 * e.nb)) + reg : null };
 }
 function dfEvalView(n, i, e){
-  const k = UI.dfK != null && UI.dfK < e.nb ? UI.dfK : 0, g = ROOT.grp != null && ROOT.grp < nbGroups() ? ROOT.grp : null, key = `e${n}-${i}-${g ?? 'all'}-${k}`, c = dfChr(key);
-  const list = dfGroupList().filter(s => dfPresent(n, s.id));
-  return `${groupChips(g)}<div class="filters"><b>Course :</b>${Array.from({ length: e.nb }, (_, q) => `<button class="chip ${q === k ? 'on' : ''}" data-action="dfK" data-k="${q}">${q + 1}</button>`).join('')}</div>
+  const k = UI.dfK != null && UI.dfK < e.nb ? UI.dfK : 0, g = dfSelG(n, i), key = `e${n}-${i}-${g ?? 'all'}-${k}`, c = dfChr(key);
+  const list = dfExList(n, i, e);
+  return `${dfGrpChips(n, i, e)}<div class="filters"><b>Course :</b>${Array.from({ length: e.nb }, (_, q) => `<button class="chip ${q === k ? 'on' : ''}" data-action="dfK" data-k="${q}">${q + 1}</button>`).join('')}</div>
     <p class="muted">Chaque course : 3 pts selon le % de VMA (≥ 110 % = 3 · 105 % = 2,5 · 100 % = 2 · 95 % = 1,5 · 90 % = 1 · 85 % = 0,5). Régularité /3 : −0,5 par tranche de 4 s d'écart entre deux courses.</p>
     ${dfChrHTML(key)}<div class="tiles df-wide">${list.map(s => { const x = dfX(n, s.id, i) || {}, cc = (x.c || [])[k] || {}, Sc = dfEvScore(n, s.id, i, e) || {}, ref = dfVmaRef(n, s.id, i), np = Object.keys(x.pil || {}).length;
       return dfTile(s.id, `<span class="meta">${ref ? `VMA ${fmtN(ref.v, 1)} · 3 pts : ${dfT(dfTime(e.d, ref.v, 110))} · 2 pts : ${dfT(dfTime(e.d, ref.v, 100))} · 1 pt : ${dfT(dfTime(e.d, ref.v, 90))}` : 'pas de VMA'}</span>
@@ -344,10 +345,38 @@ function dfEvalView(n, i, e){
 DF_VIEWS.eval = { view: dfEvalView };
 DF_LINE.eval = (n, sid, i, e) => { const S_ = dfEvScore(n, sid, i, e); if (!S_) return ''; return `<div class="muted">${S_.t.map(t => dfT(t)).join(' · ')}${S_.total != null ? ` · <b>${fmtN(S_.total, 2)}/12</b>` : ''}</div>`; };
 
+/* =====================================================================
+   COURSE CHRONOMÉTRÉE : distance choisie, temps en minutes et secondes
+   ===================================================================== */
+const dfMSs = s => { if (s == null || !isFinite(s)) return '—'; const m = Math.floor(s / 60), r = s - m * 60, rs = (Math.round(r * 10) / 10).toFixed(1).replace('.', ','); return m ? `${m} min ${r < 10 ? '0' : ''}${rs} s` : `${rs} s`; };
+function dfChronoView(n, i, e){
+  const nb = e.nb || 1, k = UI.dfK != null && UI.dfK < nb ? UI.dfK : 0, g = dfSelG(n, i), key = `c${n}-${i}-${g ?? 'all'}-${k}`, c = dfChr(key), list = dfExList(n, i, e);
+  return `${dfGrpChips(n, i, e)}${nb > 1 ? `<div class="filters"><b>Course :</b>${Array.from({ length: nb }, (_, q) => `<button class="chip ${q === k ? 'on' : ''}" data-action="dfK" data-k="${q}">${q + 1}</button>`).join('')}</div>` : ''}
+    <p class="muted">Distance : <b>${fmtN(e.d, 0)} m</b>. Départ commun avec ▶, puis 🏁 à l'arrivée de chaque coureur. Ou saisissez le temps (minutes et secondes) avec ✎.</p>
+    ${dfChrHTML(key)}<div class="tiles df-wide">${list.map(s => { const x = dfX(n, s.id, i) || {}, cc = (x.c || [])[k] || {}, ref = dfVmaRef(n, s.id, i), v = cc.t ? e.d / cc.t * 3.6 : null, pct = cc.t && ref ? dfPctOf(e.d, cc.t, ref.v) : null;
+      return dfTile(s.id, `<span class="df-big" style="font-size:30px">${cc.t ? dfMSs(cc.t) : '—'}</span>
+        <span class="meta">${cc.t ? `<b>${fmtN(v, 1)} km/h</b>${pct != null ? ` · ${fmtN(pct, 0)} % de sa VMA` : ''}` : ref ? `VMA ${fmtN(ref.v, 1)} · à 100 % : ${dfMSs(dfTime(e.d, ref.v, 100))}` : 'pas de VMA'}</span>
+        <div class="btn-row">${cc.t ? '' : `<button class="btn green df-fin" data-action="dfFin" data-sid="${s.id}" data-i="${i}" data-k="${k}" data-key="${key}" ${c.run ? '' : 'disabled'}>🏁 Arrivée</button>`}
+          <button class="btn small" data-action="dfCTms" data-sid="${s.id}" data-i="${i}" data-k="${k}">✎ ${cc.t ? 'Modifier' : 'Saisir'} le temps</button></div>${dfAbBtn(n, i, s.id)}`, { cls: x.ab ? 'abd' : '' }); }).join('')}</div>`;
+}
+DF_VIEWS.chrono = { view: dfChronoView };
+DF_LINE.chrono = (n, sid, i, e) => { const x = dfX(n, sid, i); if (!x) return ''; const T = (x.c || []).filter(c => c && c.t).map(c => c.t);
+  return `<div class="muted">${T.length ? T.map(t => `${dfMSs(t)} (${fmtN(e.d / t * 3.6, 1)} km/h)`).join(' · ') : '—'}</div>`; };
+function dfTimeBox(title, cur){
+  return new Promise(res => { const m0 = cur ? Math.floor(cur / 60) : '', s0 = cur ? r10(cur - Math.floor(cur / 60) * 60, 1) : '';
+    const m = modal(`<h2>${esc(title)}</h2><div class="df-msin"><label><input type="text" inputmode="numeric" data-mm value="${m0}"> min</label><label><input type="text" inputmode="decimal" data-ss value="${String(s0).replace('.', ',')}"> s</label></div>
+      <p class="muted">Exemple : 4 min 35,2 s. Laissez vide pour effacer.</p><div class="btn-row spread" style="margin-top:10px"><button class="btn" data-no>Annuler</button><button class="btn primary" data-ok>Valider</button></div>`);
+    const num = el => { const v = parseFloat(String(el.value).replace(',', '.')); return isFinite(v) ? v : null; };
+    m.querySelector('[data-mm]').focus();
+    m.querySelector('[data-no]').onclick = () => { closeModal(); res(undefined); };
+    m.querySelector('[data-ok]').onclick = () => { const a = num(m.querySelector('[data-mm]')), b = num(m.querySelector('[data-ss]')); closeModal();
+      if (a == null && b == null) return res(null); const t = (a || 0) * 60 + (b || 0); res(t > 0 ? r10(t, 2) : null); }; });
+}
+
 /* ---------- Actions des exercices ---------- */
 Object.assign(ACT, {
   dfSel: d => { const a = UI.dfSel = UI.dfSel || [], k = a.indexOf(d.sid); if (k >= 0) a.splice(k, 1); else a.push(d.sid); rerender(); },
-  dfSelAll: () => { const n = curLesson(), L = dfGroupList().filter(s => dfPresent(n, s.id)).map(s => s.id); UI.dfSel = (UI.dfSel || []).length === L.length ? [] : L; rerender(); },
+  dfSelAll: () => { const n = curLesson(), L = dfExList(n, UI.ex, dfEx(n, UI.ex)).map(s => s.id); UI.dfSel = (UI.dfSel || []).length === L.length ? [] : L; rerender(); },
   dfPlot: d => { const n = curLesson(), i = UI.ex, k = +d.k; (UI.dfSel || []).forEach(sid => dfSetX(n, sid, i, o => { o.pn = k; delete o.laps; delete o.plot; delete o.vv; delete o.vt; })); UI.dfSel = []; toast(`✓ Plot ${k} · ${fmtN(k * dfPlotStep() / 100, 1)} km/h`); rerender(); },
   dfSetLaps: async () => { const n = curLesson(), i = UI.ex, v = await numberBox('Nombre de tours complets', null, { step: 1, min: 0, max: 40 }); if (v == null) return;
     (UI.dfSel || []).forEach(sid => dfSetX(n, sid, i, o => { const L = o.laps || []; o.laps = Array.from({ length: Math.round(v) }, (_, k) => L[k] ?? null); })); rerender(); },
@@ -371,6 +400,9 @@ Object.assign(ACT, {
     const v = await numberBox(`Temps de ${nameOf(d.sid)} · course ${k + 1} (secondes)`, cur, { step: 0.01, min: 0, max: 3600, unit: 's' }); if (v === undefined) return;
     dfSetX(n, d.sid, i, o => { o.c = o.c || []; o.c[k] = { ...(o.c[k] || {}), t: v }; }); rerender(); },
   dfJokPick: d => dfJokPick(d),
+  dfCTms: async d => { const n = curLesson(), i = +d.i, k = +d.k, cur = (((dfX(n, d.sid, i) || {}).c || [])[k] || {}).t;
+    const v = await dfTimeBox(`Temps de ${nameOf(d.sid)}${(dfEx(n, i).nb || 1) > 1 ? ' · course ' + (k + 1) : ''}`, cur); if (v === undefined) return;
+    dfSetX(n, d.sid, i, o => { o.c = o.c || []; o.c[k] = { ...(o.c[k] || {}), t: v }; if (v == null) delete o.c[k].t; }); rerender(); },
   dfJokOk: d => { const n = curLesson(); dfSetX(n, d.sid, +d.i, o => { const c = o.c[+d.k]; c.ok = c.ok === (d.v === '1') ? null : d.v === '1'; }); rerender(); },
   dfNd: d => { const n = curLesson(); dfSetX(n, d.sid, +d.i, o => { const c = o.c[+d.k]; c.nd = Math.max(0, (c.nd || 0) + +d.d); }); rerender(); },
   dfCell: d => { const n = curLesson(), s = +d.s, k = +d.k; dfSetX(n, d.sid, +d.i, o => { o.r = o.r || []; const row = o.r[s] = o.r[s] || []; const v = row[k]; row[k] = v == null ? 2 : v === 2 ? 1 : v === 1 ? 0 : null; });

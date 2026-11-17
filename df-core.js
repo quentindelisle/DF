@@ -17,6 +17,7 @@ const DFX = {
   fc:{ n:'Fractionné court', ico:'⚡', c:'#0088E8' },
   fl:{ n:'Fractionné long', ico:'🔁', c:'#00897B' },
   eval:{ n:'Évaluation 3 × 500 m', ico:'📝', c:'#B5514C' },
+  chrono:{ n:'Course chronométrée', ico:'🏁', c:'#5B6B8C' },
 };
 const DF_TEST = t => t === 'cooper' || t === 'bats';
 const DF_FRAC = t => t === 'fc' || t === 'fl';
@@ -47,6 +48,7 @@ function dfxDefault(t){
   if (t === 'equipe') return { ...b, dur:12, nbEq:4, form:'equi', tabs:1, pauses:false };
   if (t === 'pelotons') return { ...b, d:500, nb:3, ns:3, rec:5 };
   if (t === 'eval') return { ...b, d:500, nb:3, rec:10 };
+  if (t === 'chrono') return { ...b, d:1000, nb:1 };
   if (DF_FRAC(t)) { const f = dfClone(DF_FORMES[t][0]); return { ...b, forme:f.n, ...f, pil:'serie' }; }
   return b;
 }
@@ -108,6 +110,21 @@ const dfX = (n, sid, i) => res(n, sid)?.v?.x?.[i] || null;
 function dfSetX(n, sid, i, fn){ setRes(n, sid, r => { r.v.x = r.v.x || {}; const o = r.v.x[i] = r.v.x[i] || {}; fn(o); o.ts = now(); }); }
 const dfPresent = (n, sid) => !isOff(attOf(n, sid));
 const dfGroupList = () => sortedStudents().filter(s => ROOT.grp == null || ROOT.grp >= nbGroups() || (s.grp || 0) === ROOT.grp);
+/* élèves concernés par un exercice : toute la classe (par défaut) ou une sélection (ex. rattrapage d'un test) */
+const dfWho = e => e && Array.isArray(e.who) ? e.who : null;
+const dfConc = (e, sid) => { const w = dfWho(e); return !w || w.includes(sid); };
+/* groupes propres à chaque exercice (tests, fractionnés, évaluation, course chronométrée) : e.nbG, e.form, e.eq */
+const DF_GRPT = t => ['cooper', 'bats', 'fc', 'fl', 'eval', 'chrono'].includes(t);
+const dfNbG = e => DF_GRPT(e.t) ? Math.max(1, e.nbG || 1) : 1;
+const dfSelG = (n, i) => UI.dfGk === `${n}-${i}` ? UI.dfG : null;
+function dfExList(n, i, e){
+  const L = sortedStudents().filter(s => dfPresent(n, s.id) && dfConc(e, s.id)), g = dfSelG(n, i);
+  if (dfNbG(e) < 2 || g == null) return L; const T = dfTeams(n, i, e); return L.filter(s => T[s.id] === g);
+}
+function dfGrpChips(n, i, e){
+  if (dfNbG(e) < 2) return ''; const g = dfSelG(n, i), T = dfTeams(n, i, e), used = new Set(Object.values(T));
+  return `<div class="filters"><b>Groupe :</b><button class="chip ${g == null ? 'on' : ''}" data-action="dfG" data-k="${n}-${i}" data-g="">Tous</button>${Array.from({ length: dfNbG(e) }, (_, q) => q).filter(q => used.has(q)).map(q => `<button class="chip ${g === q ? 'on' : ''}" data-action="dfG" data-k="${n}-${i}" data-g="${q}"><span class="dot" style="background:${dfTeamCol(q).c}"></span>${esc(dfTeamCol(q).n)}</button>`).join('')}</div>`;
+}
 
 /* fusion des saisies : exercice par exercice (plusieurs tablettes pour un même élève) */
 mergeRes = function(R){
@@ -217,7 +234,7 @@ function dfExDist(n, sid, i){
   if (DF_TEST(e.t)) return dfTestDist(x);
   if (e.t === 'equipe') return (x.laps || []).length * lap;
   if (e.t === 'aventuriers') return dfAvSegs(e, x.buys) * dfSegM(e);
-  if (e.t === 'pelotons' || e.t === 'eval') return (x.c || []).filter(c => c && c.t).length * e.d;
+  if (e.t === 'pelotons' || e.t === 'eval' || e.t === 'chrono') return (x.c || []).filter(c => c && c.t).length * e.d;
   if (DF_FRAC(e.t)) { const ref = dfVmaRef(n, sid, i); let d = 0; (x.r || []).forEach(row => (row || []).forEach((v, k) => { if (v != null && v > 0) d += dfRepDist(e, k, ref ? ref.v : null, dfForme(n, sid)) || 0; })); return d; }
   return null;
 }
@@ -236,13 +253,13 @@ calcAll = function(n, sid){
   C.L.pil = pil.length ? Math.round(avg(pil) * 100) : null; C.L.ab = res(n, sid) ? ab : null;
   return C;
 };
-entryDone = function(n, sid){ const E = dfExs(n); return E.length > 0 && E.every((e, i) => { const x = dfX(n, sid, i); return x && (x.ab || dfExDone(n, sid, i)); }); };
+entryDone = function(n, sid){ const E = dfExs(n), I = E.map((e, i) => i).filter(i => dfConc(E[i], sid)); return I.length > 0 && I.every(i => { const x = dfX(n, sid, i); return x && (x.ab || dfExDone(n, sid, i)); }); };
 function dfExDone(n, sid, i){
   const e = dfEx(n, i), x = dfX(n, sid, i); if (!e || !x) return false;
   if (DF_TEST(e.t)) return dfTestDone(x);
   if (e.t === 'equipe') return (x.laps || []).length > 0;
   if (e.t === 'aventuriers') return (x.buys || []).length > 0;
-  if (e.t === 'pelotons' || e.t === 'eval') return (x.c || []).filter(c => c && c.t).length >= e.nb;
+  if (e.t === 'pelotons' || e.t === 'eval' || e.t === 'chrono') return (x.c || []).filter(c => c && c.t).length >= (e.nb || 1);
   if (DF_FRAC(e.t)) return dfFracCells(x).length >= dfRepCount(e);
   return false;
 }
@@ -261,8 +278,10 @@ function dfFracSummary(e){
   const body = e.steps && e.steps.length ? 'pyramide ' + R.map(u).join('-') : `${R.length} × ${u(e.val)}`;
   return `${e.series > 1 ? e.series + ' séries de ' : ''}${body} à ${e.pct} % VMA · ${dfRecTxt(e)}${e.series > 1 && e.recS ? ' · ' + dfT(e.recS) + ' entre séries' : ''}`;
 }
-function dfExSummary(e){
+function dfExSummary(e){ const s = dfExSummary0(e), w = dfWho(e); return w ? `${s} · 👥 ${w.length} élève${w.length > 1 ? 's' : ''}` : s; }
+function dfExSummary0(e){
   if (!e) return '';
+  if (e.t === 'chrono') return `${e.nb > 1 ? e.nb + ' × ' : ''}${fmtN(e.d, 0)} m chronométré${e.nb > 1 ? 's' : ''}`;
   if (DF_TEST(e.t)) return dfProto(e) === 'vameval' ? `VAMEVAL · départ ${fmtN(e.v0 || 8, 1)} km/h, +0,5 km/h par minute · plots tous les ${fmtN(dfVamStep(), 1)} m` : `Demi-Cooper · 6 min · plots tous les ${fmtN(dfPlotStep(), 0)} m`;
   if (e.t === 'aventuriers') return `${dfBoardName(e)} · ${e.dur} min · ${e.taille === 3 ? 'trinômes' : 'binômes'} · ${e.nbParc} parcours · 1 tronçon = ${dfSegM(e)} m`;
   if (e.t === 'equipe') return `${e.dur} min · ${e.nbEq} équipes · ${e.tabs} tablette(s)`;
@@ -304,6 +323,7 @@ setInterval(() => {
 const DF_VIEWS = {};      // t → { view(n, i, e), bind?(n, i, e) }
 const _dfRender = render;
 render = function(){
+  if (S && S.settings && S.settings.nbGroups > 1) S.settings.nbGroups = 1;      // groupes de la classe remplacés par les groupes de chaque exercice
   if (UI.view === 'dfx' && ROOT.role && S.students.length) {
     stopScan(); const n = curLesson(), i = UI.ex, e = dfEx(n, i);
     if (!e) { UI.view = 'saisie'; return _dfRender(); }
@@ -329,7 +349,7 @@ viewEntry = function(){
     <div class="muted">${a ? `<span class="tag ${ATT[a].cls}">${ATT[a].n}</span> ` : ''}${ro && on('roles') ? `<span class="tag role">${esc(ro.n)}</span> ${esc(ro.d || '')}` : ''}${dfForme(n, sid) ? ' <span class="tag inap">😓 −10 %</span>' : ''}</div></div><span id="saved-flag" class="saved"></span></div>`;
   if (FRS.length) h += frStrip(sid);
   h += `<div class="card df-ref">⚡ VMA de référence : ${ref ? `<b>${fmtN(ref.v, 1)} km/h</b> <span class="muted">(${esc(ref.src)})</span>` : '<b>—</b>'} · distance de la leçon : <b>${dfKm(C.L.dist)}</b></div>`;
-  h += dfExs(n).map((e, i) => { const x = dfX(n, sid, i), done = dfExDone(n, sid, i);
+  h += dfExs(n).map((e, i) => { if (!dfConc(e, sid)) return ''; const x = dfX(n, sid, i), done = dfExDone(n, sid, i);
     return `<div class="card df-exline" style="--xc:${DFX[e.t].c}"><div class="btn-row spread"><b>${DFX[e.t].ico} ${i + 1}. ${esc(DFX[e.t].n)}</b>
       <div class="btn-row"><span class="muted">${x && x.ab ? '🚩 Abandon' : done ? '✓ fait' : x ? '… en cours' : '—'}${dfExDist(n, sid, i) ? ' · ' + dfKm(dfExDist(n, sid, i)) : ''}</span>
       <button class="btn small ${x && x.ab ? 'red' : 'ghost'}" data-action="dfAb" data-i="${i}" data-sid="${sid}">🚩 Abandon</button>
@@ -354,6 +374,7 @@ const dfAbBtn = (n, i, sid) => { const x = dfX(n, sid, i); return `<button class
 /* ---------- Actions communes ---------- */
 Object.assign(ACT, {
   dfOpen: d => go('dfx', { ex: +d.i }),
+  dfG: d => { UI.dfGk = d.k; UI.dfG = d.g === '' ? null : +d.g; UI.dfSel = []; rerender(); },
   dfAb: d => { const n = curLesson(); dfSetX(n, d.sid, +d.i, o => { o.ab = !o.ab; if (!o.ab) delete o.ab; }); rerender(); },
   dfTm: d => { const T = dfTimer(d.key);
     if (d.a === 'go') { T.t0 = performance.now() / 1000; T.run = true; T._k = dfTimerState(T).k; beepGo(); keepAwake(true); if (T.onGo) T.onGo(); }

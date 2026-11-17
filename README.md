@@ -1,6 +1,6 @@
 # Demi-fond N'EPS
 
-CA1 · Demi-fond · performance auto-référencée · Quentin Delisle · socle N'EPS 1.3.0 · **v2.2.0**
+CA1 · Demi-fond · performance auto-référencée · Quentin Delisle · socle N'EPS 1.3.0 · **v2.5.0**
 
 ## Fichiers
 
@@ -51,3 +51,10 @@ Tour impossible au-delà de 26 km/h. Demi-Cooper : un plot tous les ≈ 50 m, nu
 5. Bilans : 🏃 Bilan des exercices (distance de chaque élève, équipes, binômes), 📝 Évaluation, 🎓 Piliers (enseignant).
 
 Mise en ligne : La Forge (`.gitlab-ci.yml`) ou GitHub Pages. **Toute mise à jour = `version` (activite.js) et `CACHE` (sw.js) augmentés.**
+
+## Nouveautés 2.5
+
+- **Groupes par exercice** (tests, fractionnés, évaluation, course chronométrée) : nombre de groupes et composition dans la Programmation ; l'onglet « Groupes » de la classe est retiré.
+- **Élèves concernés** par un exercice : toute la classe ou une sélection (ex. rattrapage du test VMA en L2 pour les absents de L1). Les autres ne le voient pas et il ne compte pas pour eux.
+- **Course chronométrée** : distance au choix, temps en minutes et secondes (🏁 ou saisie ✎), vitesse et % de VMA.
+- VMA fixée : la virgule (12,5) est acceptée.

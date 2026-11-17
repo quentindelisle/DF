@@ -66,6 +66,15 @@ const DF_FICHES = {
     reussite:['Mon allure est régulière pendant tout l\'effort.', 'Je récupère en trottinant, sans m\'arrêter.'],
     secu:['Je bois pendant la séance.', 'Petite forme : cible baissée de 10 %, je le signale.'],
     prep:['Calcule ton allure à 85 % de ta VMA (VMA × 0,85).', 'Combien de temps pour 1 000 m à cette allure ?'] }),
+  chrono: e => { const d = dfFx(e).d || 1000, nb = dfFx(e).nb || 1, ts = s => { s = Math.round(s); const m = Math.floor(s / 60), r = s % 60; return m ? `${m} min ${String(r).padStart(2, '0')} s` : `${r} s`; };
+    return {
+    but:`Courir ${nb > 1 ? nb + ' fois ' : ''}${fmtN(d, 0)} m le plus régulièrement possible et connaître ton temps en minutes et secondes.`,
+    savoir:[`Ton temps est chronométré du départ jusqu'à l'arrivée des ${fmtN(d, 0)} m.`, `Ta vitesse (km/h) = ${fmtN(d, 0)} ÷ ton temps en secondes × 3,6. L'appli la calcule et la compare à ta VMA (en %).`, `Repère : avec une VMA de 12 km/h, ${fmtN(d, 0)} m à 100 % de ta VMA = ${ts(dfTime(d, 12, 100))} ; à 85 % = ${ts(dfTime(d, 12, 85))}.`],
+    deroul:['Échauffement progressif.', 'Départ commun au signal. Ton chronométreur touche 🏁 sur la tablette quand tu passes la ligne (ou note ton temps en minutes et secondes).', nb > 1 ? `Récupération entre les ${nb} courses, puis on recommence.` : 'Récupération en marchant, puis tu deviens chronométreur.'],
+    roles:['Coureur : choisir une allure qu\'il peut tenir jusqu\'au bout.', 'Chronométreur / observateur : arrêter le temps de son camarade à l\'arrivée.'],
+    reussite:['Je termine sans m\'arrêter.', 'Mon allure est régulière : pas de sprint au départ.', 'Je connais mon temps et ma vitesse à la fin.'],
+    secu:['Échauffement complet.', 'Je m\'arrête si j\'ai mal.'],
+    prep:[`Calcule ton temps sur ${fmtN(d, 0)} m à 100 % de ta VMA : temps (s) = ${fmtN(d, 0)} ÷ (VMA ÷ 3,6).`, 'Fixe-toi un objectif de temps.'] }; },
   eval: e => ({
     but:'L\'évaluation de fin de cycle : ' + (dfFx(e).nb || 3) + ' courses de ' + (dfFx(e).d || 500) + ' m avec des cibles calculées d\'après ta VMA. Note sur 12.',
     savoir:['Chaque course rapporte jusqu\'à 3 pts selon ton % de VMA (110 % et plus = 3 · 105 % = 2,5 · 100 % = 2 · 95 % = 1,5 · 90 % = 1 · 85 % = 0,5).', 'Régularité sur 3 : on retire 0,5 pt par tranche de 4 s d\'écart entre deux courses.', 'Tu dois donc aller vite ET être régulier.'],
@@ -78,7 +87,7 @@ const DF_FICHES = {
 /* ---------- Schéma du fractionné : plots de couleur selon la VMA des élèves ---------- */
 const DF_CONES = [{ n:'rouge', c:'#E3262B' }, { n:'bleu', c:'#1E5FD8' }, { n:'jaune', c:'#FFD400' }, { n:'vert', c:'#1FA24A' }, { n:'orange', c:'#FF7A00' }, { n:'blanc', c:'#FFFFFF' }];
 function dfFracGroups(n, i){
-  const L = sortedStudents().filter(s => dfPresent(n, s.id)).map(s => ({ id: s.id, v: dfVmaFor(n, s.id, i) })).filter(x => x.v > 0);
+  const L = sortedStudents().filter(s => dfPresent(n, s.id) && dfConc(dfEx(n, i), s.id)).map(s => ({ id: s.id, v: dfVmaFor(n, s.id, i) })).filter(x => x.v > 0);
   if (!L.length) return { ex: true, G: [10, 12, 14, 16].map(v => ({ v, ids: [] })) };
   let w = 1; const key = v => Math.round(v / w) * w; while (new Set(L.map(x => key(x.v))).size > DF_CONES.length) w++;
   const M = {}; L.forEach(x => (M[key(x.v)] = M[key(x.v)] || []).push(x.id));
@@ -231,6 +240,9 @@ tr.abd{opacity:.5}
 .df-pilou{margin:0 0 6px;font-size:14px;color:var(--grey);font-weight:600}
 .df-evpil td{text-align:left;white-space:normal;min-width:110px}
 .df-ev2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}.df-ev2>div{border:2px solid var(--line);border-radius:12px;padding:6px 12px}.df-ev2 h4{margin:6px 0}
+.band{background:#0B346E !important}   /* plus de groupes de classe : les groupes sont propres à chaque exercice */
+.df-msin{display:flex;gap:14px;align-items:center;font-size:22px;font-weight:800}.df-msin input{width:90px;font-size:26px;text-align:center;padding:6px}
+.df-who{border:2px dashed var(--line);border-radius:12px;padding:8px;margin:6px 0}
 .df-vamnow{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;font-size:18px;border-color:var(--navy)}
 .tile.df-stopped{background:#EAF2FB}
 .df-timer b{font-size:clamp(34px,6vw,56px)}

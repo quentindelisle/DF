@@ -228,6 +228,7 @@ tr.abd{opacity:.5}
 .df-fschema{border:3px solid var(--navy);border-radius:16px;padding:10px 14px;margin:10px 0;background:#F6FAFF}.df-fschema h3{margin-top:4px}
 .df-cone{display:inline-block;width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:18px solid var(--cc);filter:drop-shadow(0 0 1px #0B346E);vertical-align:-3px}
 .df-evsum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:8px 0}.df-evsum>div{border:3px solid var(--navy);border-radius:14px;padding:8px 12px;display:flex;flex-direction:column;background:#fff}.df-evsum span{font-size:26px;font-weight:900;color:var(--navy)}.df-evsum small{color:var(--grey);font-weight:700}
+.df-pilou{margin:0 0 6px;font-size:14px;color:var(--grey);font-weight:600}
 .df-evpil td{text-align:left;white-space:normal;min-width:110px}
 .df-ev2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}.df-ev2>div{border:2px solid var(--line);border-radius:12px;padding:6px 12px}.df-ev2 h4{margin:6px 0}
 .df-vamnow{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;font-size:18px;border-color:var(--navy)}
@@ -293,7 +294,7 @@ function dfEvalFiche(){
     blocks.push(`<h3>🔵 ${blocks.length + 1}. Fil bleu · Ma technique de course (les piliers) · /6</h3>
       <p>Tes observateurs et ton professeur regardent ta façon de courir. Le professeur compte pour <b>2/3</b>, tes observateurs pour <b>1/3</b>. Pour chaque pilier, c'est ton <b>dernier</b> niveau observé par le professeur qui compte : tu peux donc progresser jusqu'au bout.</p>
       <div class="scroll-x"><table class="tbl df-evpil"><thead><tr><th>Pilier</th><th>Ce qu'on regarde</th><th>Du moins bien… au mieux</th><th>Leçons</th></tr></thead><tbody>
-      ${pl.map(({ p, ls, m }) => `<tr><td><b>${esc(p.n)}</b></td><td><small>${p.crit.map(esc).join(' · ')}</small></td><td><small>${m === 'desc' ? p.desc.map(d => esc(d.l)).join(' → ') : m === 'on' ? 'chaque critère : oui ou non' : 'note de 1 à 10'}</small></td><td>${ls.length ? L(ls) : '—'}</td></tr>`).join('')}</tbody></table></div>`); }
+      ${pl.map(({ p, ls, m }) => `<tr><td><b>${esc(p.n)}</b>${p.ou ? `<br><small class="muted">📍 ${esc(p.ou)}</small>` : ''}</td><td><small>${p.crit.map(esc).join(' · ')}</small></td><td><small>${m === 'desc' ? p.desc.map(d => esc(d.l)).join(' → ') : m === 'on' ? 'chaque critère : oui ou non' : 'note de 1 à 10'}</small></td><td>${ls.length ? L(ls) : '—'}</td></tr>`).join('')}</tbody></table></div>`); }
   /* niveaux des fils */
   const fils = [FR, FB].filter(Boolean);
   const lv = fils.length ? `<h3>⚖️ Comment on passe au niveau du fil</h3>

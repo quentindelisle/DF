@@ -162,21 +162,21 @@ function dfForme(n, sid){ const f = res(n, sid)?.v?.fo; if (f != null) return !!
 
 /* ---------- Piliers ---------- */
 const DF_PIL = [
-  { id:'foulee', n:'Foulée', mode:'desc',
-    crit:['Pose du pied sous le corps (pas loin devant)', 'Foulée ample et fréquente', 'Talon qui remonte vers la fesse', 'Course légère, sans bruit de freinage'],
-    desc:[ { l:'Foulée courte, pieds qui traînent', v:1 }, { l:'Peu d\'amplitude, attaque talon marquée', v:2 }, { l:'Foulée qui s\'allonge, quelques freinages', v:3 }, { l:'Ample et fréquente, accélération du pied', v:4 } ] },
-  { id:'posture', n:'Posture verticale', mode:'desc',
-    crit:['Buste droit, légèrement penché vers l\'avant', 'Bassin haut, gainé (pas « assis »)', 'Pas de cassure aux hanches', 'Épaules basses et relâchées'],
-    desc:[ { l:'Assis, cassé aux hanches', v:1 }, { l:'Penché en arrière ou trop en avant', v:2 }, { l:'Droit mais se tasse en fin de course', v:3 }, { l:'Grand et gainé du début à la fin', v:4 } ] },
-  { id:'bras', n:'Utilisation des bras', mode:'desc',
-    crit:['Coudes à 90°', 'Bras d\'avant en arrière, sans croiser devant', 'Mains et épaules relâchées', 'Bras qui relancent dans les accélérations'],
-    desc:[ { l:'Bras peu utilisés, ballants', v:1 }, { l:'Bras réflexes mais pas moteurs', v:2 }, { l:'Bras utilisés surtout en fin de course', v:3 }, { l:'Bras moteurs, rythmés, tout au long', v:4 } ] },
-  { id:'regard', n:'Regard devant', mode:'desc',
-    crit:['Regard 10 à 15 m devant', 'Tête dans l\'axe du corps', 'Visage et mâchoire relâchés'],
-    desc:[ { l:'Vers le bas', v:1 }, { l:'Tire la tête', v:2 }, { l:'En face', v:4 } ] },
-  { id:'effort', n:'Gestion de l\'effort', mode:'desc',
-    crit:['Départ contrôlé', 'Même allure du début à la fin', 'Respiration maîtrisée à l\'arrivée'],
-    desc:[ { l:'Se dégrade en milieu de course', v:1 }, { l:'Se dégrade en fin de course', v:2 }, { l:'Régulier', v:4 } ] },
+  { id:'foulee', n:'Foulée', mode:'desc', ou:'Sur le côté de la piste, quand le coureur passe devant toi.',
+    crit:['Le pied se pose sous le corps, et pas loin devant ?', 'On entend peu le pied taper le sol ?', 'Le talon remonte derrière, vers les fesses ?'],
+    desc:[ { l:'Petits pas, les pieds traînent ou tapent fort', v:1 }, { l:'Le pied se pose loin devant, sur le talon : ça freine', v:2 }, { l:'Bonne foulée au début, elle se raccourcit quand il fatigue', v:3 }, { l:'Foulée légère et ample du début à la fin, le pied « griffe » le sol', v:4 } ] },
+  { id:'posture', n:'Posture verticale', mode:'desc', ou:'Sur le côté de la piste.',
+    crit:['Le coureur est « grand », comme tiré vers le haut par un fil sur la tête ?', 'Les fesses restent sous le corps (il n\'est pas « assis ») ?', 'Les épaules sont basses et détendues, pas remontées vers les oreilles ?'],
+    desc:[ { l:'Assis : les fesses en arrière, le corps plié en deux', v:1 }, { l:'Penché en arrière, ou trop penché en avant', v:2 }, { l:'Grand au début, mais il se tasse à la fin', v:3 }, { l:'Grand et gainé du début à la fin', v:4 } ] },
+  { id:'bras', n:'Utilisation des bras', mode:'desc', ou:'De face ou de dos, pour voir si les bras croisent.',
+    crit:['Les coudes sont pliés à peu près en angle droit (90°) ?', 'Les bras vont d\'avant en arrière, sans croiser devant le ventre ?', 'Les mains sont relâchées (pas de poings serrés) ?'],
+    desc:[ { l:'Bras ballants ou collés au corps, ils ne bougent presque pas', v:1 }, { l:'Bras qui croisent devant le ventre et font tourner les épaules', v:2 }, { l:'Bons bras au début, ils se crispent ou s\'arrêtent à la fin', v:3 }, { l:'Bras actifs et réguliers qui aident à avancer, même à la fin', v:4 } ] },
+  { id:'regard', n:'Regard devant', mode:'desc', ou:'De face, ou sur le côté au moment où il arrive vers toi.',
+    crit:['Il regarde loin devant lui (environ 10 à 15 m), pas ses pieds ?', 'La tête est droite, dans l\'axe du corps ?', 'Le visage est détendu (pas de grimace, pas de mâchoire serrée) ?'],
+    desc:[ { l:'Il regarde ses pieds, la tête est baissée', v:1 }, { l:'La tête part en arrière ou bouge d\'un côté à l\'autre', v:2 }, { l:'Il regarde devant, mais grimace et se crispe à la fin', v:3 }, { l:'Regard loin devant, tête droite et visage détendu tout le temps', v:4 } ] },
+  { id:'effort', n:'Gestion de l\'effort', mode:'desc', ou:'Près de la ligne de départ ou d\'arrivée, avec la tablette (cibles ✓ / ≈ / ✗).',
+    crit:['Il ne part pas plus vite que sa cible sur la première répétition ?', 'Il garde la même allure de la première à la dernière répétition ?', 'À l\'arrivée, il peut dire une phrase courte, même s\'il est essoufflé ?'],
+    desc:[ { l:'Part beaucoup trop vite et s\'écroule (marche ou s\'arrête)', v:1 }, { l:'Ralentit nettement au milieu de l\'exercice', v:2 }, { l:'Tient presque tout, mais rate les dernières répétitions', v:3 }, { l:'Même allure du début à la fin, tout en restant sur sa cible', v:4 } ] },
 ];
 const dfPilMode = p => (S.params && S.params.pilMode && S.params.pilMode[p.id]) || p.mode;
 /* score d'un pilier, de 0 à 1 */
@@ -201,7 +201,7 @@ function dfPilForm(o, action, attrs, ids){
       return `<button class="sc ${on_ ? 'on' : ''}" data-action="${action}" ${attrs} data-p="${p.id}" data-v="${x}" style="${on_ ? `background:${c};color:${darkTxt(c) ? '#0A1633' : '#fff'}` : `border-color:${c}`}"><b>${x}</b></button>`; }).join('')}</div>`;
     else { const mx = Math.max(...p.desc.map(d => d.v)); ctl = `<div class="choices">${p.desc.map(d => { const c = d.v === mx ? '#1E8E3E' : d.v >= mx * .7 ? '#86DC96' : d.v >= mx * .45 ? '#F07000' : '#D0161B', on_ = v === d.v;
       return `<button class="ch ${on_ ? 'on' : ''}" data-action="${action}" ${attrs} data-p="${p.id}" data-v="${d.v}" style="${on_ ? `background:${c};border-color:${c};color:${darkTxt(c) ? '#0A1633' : '#fff'}` : `border-color:${c}`}">${esc(d.l)}</button>`; }).join('')}</div>`; }
-    return `<div class="df-pil"><h4>${esc(p.n)}</h4>${ctl}</div>`; }).join('');
+    return `<div class="df-pil"><h4>${esc(p.n)}</h4>${p.ou ? `<p class="df-pilou">📍 Où te placer : ${esc(p.ou)}</p>` : ''}${ctl}</div>`; }).join('');
 }
 /* applique un clic du formulaire à l'objet piliers */
 function dfPilApply(o, d){

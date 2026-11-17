@@ -47,7 +47,7 @@ function dfxDefault(t){
   if (t === 'equipe') return { ...b, dur:12, nbEq:4, form:'equi', tabs:1, pauses:false };
   if (t === 'pelotons') return { ...b, d:500, nb:3, ns:3, rec:5 };
   if (t === 'eval') return { ...b, d:500, nb:3, rec:10 };
-  if (DF_FRAC(t)) { const f = dfClone(DF_FORMES[t][0]); return { ...b, forme:f.n, ...f, pil:'fin' }; }
+  if (DF_FRAC(t)) { const f = dfClone(DF_FORMES[t][0]); return { ...b, forme:f.n, ...f, pil:'serie' }; }
   return b;
 }
 const dfClone = o => JSON.parse(JSON.stringify(o));

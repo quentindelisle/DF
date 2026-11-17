@@ -75,7 +75,7 @@ function dfFracEditor(n, i, e){
       ${dfStepper('dfFS', a('rec.val'), e.rec.unite === 'dist' ? fmtN(e.rec.val, 0) + ' m' : dfT(e.rec.val))}</div>
     <div class="form-row"><span>Séries</span>${dfStepper('dfFS', a('series'), e.series)}</div>
     ${e.series > 1 ? `<div class="form-row"><span>Récupération entre séries</span>${dfStepper('dfFS', a('recS'), dfT(e.recS))}</div>` : ''}
-    <div class="form-row"><span>Piliers notés par l'observateur</span><div class="choices">${ch('pil', 'fin', 'en fin d\'exercice', e.pil)}${ch('pil', 'rep', 'à chaque passage', e.pil)}</div></div>
+    <div class="form-row"><span>Piliers notés par l'observateur</span><div class="choices">${ch('pil', 'serie', 'à la fin de chaque série', e.pil)}${ch('pil', 'fin', 'une fois, en fin d\'exercice', e.pil)}${ch('pil', 'rep', 'à chaque répétition', e.pil)}</div></div>
     <p class="muted">Exemple de cibles : ${esc(ex)}. Un élève en petite forme (appel) court à ${e.pct - 10} %.</p>`;
 }
 function dfComposer(n, i, e){

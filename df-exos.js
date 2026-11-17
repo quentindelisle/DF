@@ -254,22 +254,47 @@ function dfFracPhases(e){
     if (last && s < e.series - 1 && e.recS) P.push({ n:'Récup entre séries', s: e.recS }); });
   return P;
 }
+/* passages : série × groupe (Série 1 · Rouge, Série 1 · Bleu, Série 2 · Rouge…) */
+function dfFracPassages(n, e){
+  const G = nbGroups() > 1 ? Array.from({ length: nbGroups() }, (_, g) => g).filter(g => sortedStudents().some(s => (s.grp || 0) === g && dfPresent(n, s.id))) : [null], P = [];
+  for (let s = 0; s < (e.series || 1); s++) G.forEach(g => P.push({ s, g }));
+  return P;
+}
+const dfPassName = (e, p) => `Série ${p.s + 1}${p.g != null ? ' · ' + groupColor(p.g).n : ''}`;
+const dfPassList = (n, p) => sortedStudents().filter(s => dfPresent(n, s.id) && (p.g == null || (s.grp || 0) === p.g));
+function dfPassDone(n, i, e, p){ const L = dfPassList(n, p).filter(s => !(dfX(n, s.id, i) || {}).ab), K = dfReps(e).length;
+  return L.length > 0 && L.every(s => ((((dfX(n, s.id, i) || {}).r || [])[p.s]) || []).filter(v => v != null).length >= K); }
+/* clé des piliers selon le réglage : fin d'exercice, fin de chaque série, chaque répétition */
+const dfPilKeyOf = (e, s, k) => e.pil === 'rep' ? `s${s}r${k ?? 0}` : e.pil === 'serie' ? `s${s}` : 'fin';
+function dfFracPhasesS(e, s){
+  const R = dfReps(e), P = [];
+  R.forEach((v, k) => { P.push({ n: `S${s + 1} · effort ${k + 1}`, s: v }); if (k < R.length - 1 && e.rec.unite === 'temps') P.push({ n: `Récup (${e.rec.type})`, s: e.rec.val }); });
+  return P;
+}
 function dfFracView(n, i, e){
-  const list = dfGroupList().filter(s => dfPresent(n, s.id)), R = dfReps(e), cols = [];
-  for (let s = 0; s < (e.series || 1); s++) R.forEach((v, k) => cols.push({ s, k }));
-  const key = `f${n}-${i}`;
-  let h = `${groupChips(ROOT.grp != null && ROOT.grp < nbGroups() ? ROOT.grp : null)}
-    ${e.mode === 'temps' ? dfTimerHTML(key, dfFracPhases(e)) : e.rec.unite === 'temps' ? dfTimerHTML(key, [{ n:'Récupération', s: e.rec.val }]) : ''}
-    <p class="muted">Cible de chaque coureur d'après sa VMA (😓 = élève en petite forme, −10 % de VMA). Touchez une case après chaque répétition : ✓ cible atteinte · ≈ presque · ✗ non atteinte.
-      ${!dfLessonPil(n).length ? '' : e.pil === 'rep' ? 'Piliers : à chaque passage.' : 'Piliers : en fin d\'exercice.'}</p>
+  const R = dfReps(e), PS = dfFracPassages(n, e), all = UI.dfFp === 'all' && UI.dfFpK === `${n}-${i}`;
+  let pi = UI.dfFpK === `${n}-${i}` && typeof UI.dfFp === 'number' && UI.dfFp < PS.length ? UI.dfFp : -1;
+  if (!all && pi < 0) { pi = PS.findIndex(p => !dfPassDone(n, i, e, p)); if (pi < 0) pi = 0; }
+  const P = all ? null : PS[pi], cols = [];
+  for (let s = 0; s < (e.series || 1); s++) if (all || s === P.s) R.forEach((v, k) => cols.push({ s, k }));
+  const list = all ? dfGroupList().filter(s => dfPresent(n, s.id)) : dfPassList(n, P);
+  const key = all ? `f${n}-${i}` : `f${n}-${i}-s${P.s}-g${P.g ?? 'x'}`, ph = all ? dfFracPhases(e) : dfFracPhasesS(e, P.s);
+  const pc = p => p.g != null ? groupColor(p.g).c : '#0B346E', nx = !all && PS[pi + 1];
+  const pilTxt = !dfLessonPil(n).length ? '' : e.pil === 'rep' ? 'Piliers : à chaque répétition.' : e.pil === 'serie' ? 'Piliers : à la fin de chaque série (👀).' : 'Piliers : une fois, en fin d\'exercice.';
+  let h = `<div class="filters df-pass"><b>Passage :</b>${PS.map((p, q) => `<button class="chip ${!all && q === pi ? 'on' : ''}" style="--pc:${pc(p)}" data-action="dfFp" data-k="${n}-${i}" data-p="${q}"><span class="dot" style="background:${pc(p)}"></span>${esc(dfPassName(e, p))}${dfPassDone(n, i, e, p) ? ' ✓' : ''}</button>`).join('')}
+      <button class="chip ${all ? 'on' : ''}" data-action="dfFp" data-k="${n}-${i}" data-p="all">▦ Tout voir</button></div>
+    ${all ? groupChips(ROOT.grp != null && ROOT.grp < nbGroups() ? ROOT.grp : null) : ''}
+    ${e.mode === 'temps' ? dfTimerHTML(key, ph, { color: all ? null : (P.g != null ? groupColor(P.g).c : null) }) : e.rec.unite === 'temps' ? dfTimerHTML(key, [{ n:'Récupération', s: e.rec.val }]) : ''}
+    <p class="muted">${all ? '' : `<b>${esc(dfPassName(e, P))}</b> : ${list.length} coureur(s). `}Cible de chaque coureur d'après sa VMA (😓 = petite forme, −10 % de VMA). Touchez une case après chaque répétition : ✓ cible atteinte · ≈ presque · ✗ non atteinte. ${pilTxt}</p>
     <div class="card scroll-x"><table class="tbl df-mat"><thead><tr><th>Coureur</th>${cols.map(c => `<th>${e.series > 1 ? 'S' + (c.s + 1) + '·' : ''}${c.k + 1}<br><small>${e.mode === 'dist' ? fmtN(R[c.k], 0) + ' m' : dfT(R[c.k])}</small></th>`).join('')}<th>👀</th><th>🚩</th></tr></thead><tbody>
-    ${list.map(st => { const sid = st.id, x = dfX(n, sid, i) || {}, ref = dfVmaRef(n, sid, i), fo = dfForme(n, sid), np = Object.keys(x.pil || {}).length;
+    ${list.map(st => { const sid = st.id, x = dfX(n, sid, i) || {}, ref = dfVmaRef(n, sid, i), fo = dfForme(n, sid), pk = all ? null : dfPilKeyOf(e, P.s), np = all || e.pil === 'fin' || e.pil === 'rep' ? Object.keys(x.pil || {}).length : (dfPilMean((x.pil || {})[pk]) != null ? '✓' : 0);
       return `<tr class="${x.ab ? 'abd' : ''}"><td class="nm">${band(sid)}<div><b>${esc(nameOf(sid))}</b><br><small>${ref ? fmtN(ref.v, 1) + ' km/h · ' + (e.pct - (fo ? 10 : 0)) + ' %' : 'pas de VMA'}</small>
         <button class="df-fo ${fo ? 'on' : ''}" data-action="dfForme" data-sid="${sid}" title="Petite forme : −10 %">😓</button></div></td>
         ${cols.map(c => { const v = ((x.r || [])[c.s] || [])[c.k], tg = ref ? dfRepTarget(e, c.k, ref.v, fo) : null;
           return `<td><button class="df-cell" data-action="dfCell" data-sid="${sid}" data-i="${i}" data-s="${c.s}" data-k="${c.k}" style="${v != null ? `background:${DF_CELL[v].c};color:#fff` : ''}">${v != null ? DF_CELL[v].s : ''}<small>${tg ? (e.mode === 'dist' ? dfT(tg.t) : tg.d == null ? '' : fmtN(Math.round(tg.d / 5) * 5, 0) + ' m') : ''}</small></button></td>`; }).join('')}
-        <td>${dfLessonPil(n).length ? `<button class="btn small ${np ? 'green' : ''}" data-action="dfPilOpen" data-sid="${sid}" data-i="${i}">👀${np ? ' ' + np : ''}</button>` : ''}</td><td>${dfAbBtn(n, i, sid)}</td></tr>`; }).join('')}
-    </tbody></table></div>`;
+        <td>${dfLessonPil(n).length ? `<button class="btn small ${np ? 'green' : ''}" data-action="dfPilOpen" data-sid="${sid}" data-i="${i}" ${pk ? `data-pk="${pk}"` : ''}>👀${np ? ' ' + np : ''}</button>` : ''}</td><td>${dfAbBtn(n, i, sid)}</td></tr>`; }).join('')}
+    </tbody></table></div>
+    ${nx ? `<div class="btn-row spread"><span class="muted">${dfPassDone(n, i, e, P) ? '✓ Passage complet.' : ''}${e.pil === 'serie' && dfLessonPil(n).length ? ' N\'oubliez pas les piliers (👀) de fin de série.' : ''}</span><button class="btn primary" data-action="dfFp" data-k="${n}-${i}" data-p="${pi + 1}">Passage suivant : ${esc(dfPassName(e, nx))} ▶</button></div>` : ''}`;
   return h;
 }
 DF_VIEWS.fc = DF_VIEWS.fl = { view: dfFracView };
@@ -278,11 +303,11 @@ DF_LINE.fc = DF_LINE.fl = (n, sid, i, e) => { const x = dfX(n, sid, i); if (!x) 
 
 /* Piliers d'un coureur (observateur), pour un exercice */
 function dfPilModal(n, sid, i){
-  const e = dfEx(n, i), x = dfX(n, sid, i) || {}, keys = e.pil === 'rep' ? (() => { const a = []; for (let s = 0; s < (e.series || 1); s++) dfReps(e).forEach((_, k) => a.push(`s${s}r${k}`)); return a; })() : ['fin'];
+  const e = dfEx(n, i), x = dfX(n, sid, i) || {}, keys = e.pil === 'rep' ? (() => { const a = []; for (let s = 0; s < (e.series || 1); s++) dfReps(e).forEach((_, k) => a.push(`s${s}r${k}`)); return a; })() : e.pil === 'serie' ? Array.from({ length: e.series || 1 }, (_, s) => `s${s}`) : ['fin'];
   const key = UI.dfPk && keys.includes(UI.dfPk) ? UI.dfPk : keys[0], o = (x.pil || {})[key] || {}, g = student(sid)?.grp || 0;
   const mates = sortedStudents().filter(s => s.id !== sid && dfPresent(n, s.id) && (e.t === 'eval' || nbGroups() < 2 || (s.grp || 0) === g));
   const m = modal(`<h2>👀 Piliers de ${esc(nameOf(sid))}</h2>
-    ${keys.length > 1 ? `<div class="lchips"><b>Passage</b>${keys.map(k => `<button class="chip ${k === key ? 'on' : ''}" data-pk="${k}">${k.replace(/s(\d+)r(\d+)/, (z, a, b) => (e.series > 1 ? 'S' + (+a + 1) + '·' : '') + (+b + 1))}</button>`).join('')}</div>` : ''}
+    ${keys.length > 1 ? `<div class="lchips"><b>Passage</b>${keys.map(k => `<button class="chip ${k === key ? 'on' : ''}" data-pk="${k}">${k.replace(/^s(\d+)$/, (z, a) => 'Fin de la série ' + (+a + 1)).replace(/s(\d+)r(\d+)/, (z, a, b) => (e.series > 1 ? 'S' + (+a + 1) + '·' : '') + (+b + 1))}</button>`).join('')}</div>` : ''}
     <div class="lchips"><b>Observateur</b>${mates.map(s => `<button class="chip ${o.by === s.id ? 'on' : ''}" data-by="${s.id}">${esc(nameOf(s.id))}</button>`).join('')}</div>
     <p class="muted">🎯 Pilier${dfLessonPil(n).length > 1 ? 's' : ''} de la leçon : <b>${esc(dfPilNames(dfLessonPil(n)))}</b></p>
     ${dfPilForm(o, 'dfPilSet', `data-sid="${sid}" data-i="${i}" data-key="${key}"`, dfLessonPil(n))}
@@ -352,7 +377,8 @@ Object.assign(ACT, {
     if (dfEx(n, +d.i).pil === 'rep' && ((dfX(n, d.sid, +d.i).r || [])[s] || [])[k] === 2) { UI.dfPk = `s${s}r${k}`; }
     rerender(); },
   dfForme: d => { const n = curLesson(), v = !dfForme(n, d.sid); setRes(n, d.sid, r => { r.v.fo = v; }); rerender(); },
-  dfPilOpen: d => { if (!dfLessonPil(curLesson()).length) return toast('Pas de pilier observé dans cette leçon'); UI.dfPk = null; dfPilModal(curLesson(), d.sid, +d.i); },
+  dfPilOpen: d => { if (!dfLessonPil(curLesson()).length) return toast('Pas de pilier observé dans cette leçon'); UI.dfPk = d.pk || null; dfPilModal(curLesson(), d.sid, +d.i); },
+  dfFp: d => { UI.dfFpK = d.k; UI.dfFp = d.p === 'all' ? 'all' : +d.p; UI.dfPk = null; rerender(); window.scrollTo(0, 0); },
   dfPilSet: d => { const n = curLesson(), i = +d.i; dfSetX(n, d.sid, i, X => { X.pil = X.pil || {}; const by = (X.pil[d.key] || {}).by; X.pil[d.key] = { ...dfPilApply({ ...(X.pil[d.key] || {}) }, d), ...(by ? { by } : {}) }; });
     UI.dfPk = d.key; dfPilModal(n, d.sid, i); },
   dfPlotsGuide: d => { const e = d && d.i != null && d.i !== '' ? dfEx(d.n ? +d.n : curLesson(), +d.i) : null; return e && dfProto(e) === 'vameval' ? dfVamGuide(e) : dfPlotsGuide(); },

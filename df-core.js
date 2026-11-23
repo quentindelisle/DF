@@ -18,15 +18,18 @@ const DFX = {
   fl:{ n:'Fractionné long', ico:'🔁', c:'#00897B' },
   eval:{ n:'Évaluation 3 × 500 m', ico:'📝', c:'#B5514C' },
   chrono:{ n:'Course chronométrée', ico:'🏁', c:'#5B6B8C' },
-  zf:{ n:'Zombie Frac\'', ico:'🧟', c:'#6B2E2E' },
-  kart:{ n:'Kart\'Endurance', ico:'🏎️', c:'#1C6ED6' },
-  loups:{ n:'Gare aux loups', ico:'🐺', c:'#3B2A7A' },
 };
+/* jeux retirés en 2.8 : Zombie Frac' redevient un fractionné (court ou long selon sa forme), Kart'Endurance et Gare aux loups sont enlevés de la programmation */
+function dfMigrate28(){ Object.values(ROOT.classes || {}).forEach(c => { const C = c.params && c.params.cyc; if (!C) return; let ch = false;
+  Object.values(C).forEach(L => { if (!L || !Array.isArray(L.ex)) return;
+    L.ex.forEach(e => { if (e && e.t === 'zf') { e.t = (DF_FORMES.fl || []).some(f => f.n === e.forme) ? 'fl' : 'fc'; delete e.mission; ch = true; } });
+    const n0 = L.ex.length; L.ex = L.ex.filter(e => e && e.t !== 'kart' && e.t !== 'loups'); if (L.ex.length !== n0) ch = true; });
+  if (c.params) { delete c.params.kcards; delete c.params.koff; } delete c.dfg; if (ch) c._mig28 = 1; }); }
 /* situation inconnue (QR envoyé par une version plus récente de l'appli) : message au lieu d'un plantage */
 const DFX_UNKNOWN = { n:'Situation inconnue : mettez l\'appli à jour', ico:'❓', c:'#8A8F99' };
 Object.setPrototypeOf(DFX, new Proxy({}, { get: (t, k) => typeof k === 'string' ? DFX_UNKNOWN : undefined }));
 const DF_TEST = t => t === 'cooper' || t === 'bats';
-const DF_FRAC = t => t === 'fc' || t === 'fl' || t === 'zf';      // Zombie Frac' = un fractionné raconté comme une fuite
+const DF_FRAC = t => t === 'fc' || t === 'fl';
 const DF_TEAM = t => t === 'equipe' || t === 'aventuriers';
 
 /* Formes de travail proposées pour les fractionnés */
@@ -47,7 +50,6 @@ const DF_FORMES = {
     { n:'Pyramide 1-2-3-2-1 min', mode:'temps', steps:[60, 120, 180, 120, 60], pct:90, rec:{ type:'active', unite:'temps', val:60 }, series:1, reps:5, recS:0 },
   ],
 };
-DF_FORMES.zf = [...DF_FORMES.fc, ...DF_FORMES.fl];
 function dfxDefault(t){
   const b = { t };
   if (DF_TEST(t)) return { ...b, dur:360, proto:'cooper', v0:8 };
@@ -56,9 +58,7 @@ function dfxDefault(t){
   if (t === 'pelotons') return { ...b, d:500, nb:3, ns:3, rec:5 };
   if (t === 'eval') return { ...b, d:500, nb:3, rec:10 };
   if (t === 'chrono') return { ...b, d:1000, nb:1, dep:'commun', pct:90 };
-  if (t === 'kart') return { ...b, modele:'bonus', circ:'champi', pct:100, beep:15, gp:4, taille:4, form:'equi' };
-  if (t === 'loups') return { ...b, modele:0, nuits:[[3, 70], [3, 72], [3, 75], [3, 75]], jour:2, sig:30, pd:20, tol:1, son:'sifflet' };
-  if (DF_FRAC(t)) { const f = dfClone(DF_FORMES[t][0]); return { ...b, forme:f.n, ...f, pil:'serie', ...(t === 'zf' ? { mission:0 } : {}) }; }
+  if (DF_FRAC(t)) { const f = dfClone(DF_FORMES[t][0]); return { ...b, forme:f.n, ...f, pil:'serie' }; }
   return b;
 }
 const dfClone = o => JSON.parse(JSON.stringify(o));
@@ -123,7 +123,7 @@ const dfGroupList = () => sortedStudents().filter(s => ROOT.grp == null || ROOT.
 const dfWho = e => e && Array.isArray(e.who) ? e.who : null;
 const dfConc = (e, sid) => { const w = dfWho(e); return !w || w.includes(sid); };
 /* groupes propres à chaque exercice (tests, fractionnés, évaluation, course chronométrée) : e.nbG, e.form, e.eq */
-const DF_GRPT = t => ['cooper', 'bats', 'fc', 'fl', 'zf', 'eval', 'chrono'].includes(t);
+const DF_GRPT = t => ['cooper', 'bats', 'fc', 'fl', 'eval', 'chrono'].includes(t);
 const dfNbG = e => DF_GRPT(e.t) ? Math.max(1, e.nbG || 1) : 1;
 const dfSelG = (n, i) => UI.dfGk === `${n}-${i}` ? UI.dfG : null;
 function dfExList(n, i, e){
@@ -216,6 +216,9 @@ function dfPilMean(o){ if (!o) return null; const a = vals(DF_PIL.map(p => dfPil
 /* formulaire d'un pilier (data-action = action ; attrs = data-… communs) */
 /* piliers observés pendant la leçon n (réglés dans la Programmation des leçons) */
 function dfLessonPil(n){ const a = dfCyc(n).pil; return Array.isArray(a) ? a : DF_PIL.map(p => p.id); }   // [] = aucun pilier dans la leçon
+/* observe-t-on les piliers dans cet exercice ? choix par exercice (e.obs) ; par défaut : oui pour les fractionnés et l'évaluation */
+const dfObs = e => !!e && (e.obs ?? (DF_FRAC(e.t) || e.t === 'eval'));
+const dfObsOn = (n, e) => dfObs(e) && dfLessonPil(n).length > 0;
 const dfPilNames = ids => ids.length ? ids.map(id => (DF_PIL.find(p => p.id === id) || {}).n).filter(Boolean).join(', ') : 'aucun (pas d\'observation de pilier dans cette leçon)';
 function dfPilForm(o, action, attrs, ids){
   o = o || {};
@@ -244,8 +247,7 @@ function dfExDist(n, sid, i){
   if (e.t === 'equipe') return (x.laps || []).length * lap;
   if (e.t === 'aventuriers') return dfAvSegs(e, x.buys) * dfSegM(e);
   if (e.t === 'pelotons' || e.t === 'eval' || e.t === 'chrono') return (x.c || []).filter(c => c && c.t).length * e.d;
-  if (DF_FRAC(e.t)) { const ref = dfVmaRef(n, sid, i), pl = dfZPlus(e, x); let d = 0; (x.r || []).forEach(row => (row || []).forEach((v, k) => { if (v != null && v > 0) d += dfRepDist(e, k, ref ? ref.v : null, dfForme(n, sid), pl) || 0; })); return d; }
-  if (e.t === 'loups') { const G = Object.values(x.g || {}).map(a => vals(a || []).length ? Math.max(...vals(a)) : 0); return G.length ? G.reduce((a, b) => a + b, 0) * (e.pd || 20) : null; }
+  if (DF_FRAC(e.t)) { const ref = dfVmaRef(n, sid, i); let d = 0; (x.r || []).forEach(row => (row || []).forEach((v, k) => { if (v != null && v > 0) d += dfRepDist(e, k, ref ? ref.v : null, dfForme(n, sid)) || 0; })); return d; }
   return null;
 }
 function dfFracCells(x){ const a = []; (x && x.r || []).forEach(row => (row || []).forEach(v => { if (v != null) a.push(v); })); return a; }
@@ -269,8 +271,6 @@ function dfExDone(n, sid, i){
   if (DF_TEST(e.t)) return dfTestDone(x);
   if (e.t === 'equipe') return (x.laps || []).length > 0;
   if (e.t === 'aventuriers') return (x.buys || []).length > 0;
-  if (e.t === 'kart') return x.co != null || !!x.pl;
-  if (e.t === 'loups') return Object.values(x.g || {}).some(a => vals(a || []).length);
   if (e.t === 'pelotons' || e.t === 'eval' || e.t === 'chrono') return (x.c || []).filter(c => c && c.t).length >= (e.nb || 1);
   if (DF_FRAC(e.t)) return dfFracCells(x).length >= dfRepCount(e);
   return false;
@@ -279,8 +279,6 @@ function dfExDone(n, sid, i){
 /* ---------- Fractionné : répétitions ---------- */
 const dfReps = e => e.steps && e.steps.length ? e.steps : Array.from({ length: e.reps || 1 }, () => e.val);
 const dfRepCount = e => dfReps(e).length * (e.series || 1);
-/* Zombie Frac' : le « zombie chasseur » court sa cible à +10 % de VMA */
-const dfZPlus = (e, x) => e && e.t === 'zf' && x && x.zc ? 10 : 0;
 function dfRepDist(e, k, vma, forme, plus){ const v = dfReps(e)[k]; if (v == null) return null; const pct = e.pct - (forme ? 10 : 0) + (plus || 0);
   return e.mode === 'dist' ? v : dfDist(v, vma, pct); }
 function dfRepTarget(e, k, vma, forme, plus){ const v = dfReps(e)[k], pct = e.pct - (forme ? 10 : 0) + (plus || 0);
@@ -292,18 +290,16 @@ function dfFracSummary(e){
   const body = e.steps && e.steps.length ? 'pyramide ' + R.map(u).join('-') : `${R.length} × ${u(e.val)}`;
   return `${e.series > 1 ? e.series + ' séries de ' : ''}${body} à ${e.pct} % VMA · ${dfRecTxt(e)}${e.series > 1 && e.recS ? ' · ' + dfT(e.recS) + ' entre séries' : ''}`;
 }
-function dfExSummary(e){ const s = dfExSummary0(e), w = dfWho(e); return w ? `${s} · 👥 ${w.length} élève${w.length > 1 ? 's' : ''}` : s; }
+function dfExSummary(e){ const s = dfExSummary0(e), w = dfWho(e); return (w ? `${s} · 👥 ${w.length} élève${w.length > 1 ? 's' : ''}` : s) + (dfObs(e) ? ' · 👀 piliers' : ''); }
 function dfExSummary0(e){
   if (!e) return '';
   if (e.t === 'chrono') return `${e.nb > 1 ? e.nb + ' × ' : ''}${fmtN(e.d, 0)} m chronométré${e.nb > 1 ? 's' : ''}${e.dep === 'af' ? ` · 🏁 All finishers à ${e.pct || 90} % VMA` : ''}`;
-  if (e.t === 'kart') return `${(DF_KART_MOD[e.modele] || DF_KART_MOD.bonus).t} · ${dfKCirc(e).ico} ${dfKCirc(e).n} (${dfKCirc(e).reps > 1 ? dfKCirc(e).reps + ' × ' : ''}${dfT(dfKCirc(e).work)}) à ${dfKPct(e)} % VMA · ${e.gp || 4} Grand Prix`;
-  if (e.t === 'loups') return `${(e.nuits || []).length} nuit(s) : ${(e.nuits || []).map(([d, p]) => `${d} min à ${p} %`).join(' · ')} · signal toutes les ${e.sig || 30} s`;
   if (DF_TEST(e.t)) return dfProto(e) === 'vameval' ? `VAMEVAL · départ ${fmtN(e.v0 || 8, 1)} km/h, +0,5 km/h par minute · plots tous les ${fmtN(dfVamStep(), 1)} m` : `Demi-Cooper · 6 min · plots tous les ${fmtN(dfPlotStep(), 0)} m`;
   if (e.t === 'aventuriers') return `${dfBoardName(e)} · ${e.dur} min · ${e.taille === 3 ? 'trinômes' : 'binômes'} · ${e.nbParc} parcours · 1 tronçon = ${dfSegM(e)} m`;
   if (e.t === 'equipe') return `${e.dur} min · ${e.nbEq} équipes · ${e.tabs} tablette(s)`;
   if (e.t === 'pelotons') return `${e.nb} × ${e.d} m · ${e.ns} séries`;
   if (e.t === 'eval') return `${e.nb} × ${e.d} m · récup ${e.rec} min`;
-  if (DF_FRAC(e.t)) return (e.t === 'zf' ? `${(DF_ZMIS[e.mission || 0] || DF_ZMIS[0]).ico} ${(DF_ZMIS[e.mission || 0] || DF_ZMIS[0]).t} · ` : '') + dfFracSummary(e);
+  if (DF_FRAC(e.t)) return dfFracSummary(e);
   return '';
 }
 const dfLessonSummary = n => dfExs(n).map(e => `${DFX[e.t].ico} ${DFX[e.t].n}`).join(' + ') || 'aucun exercice';
@@ -344,11 +340,19 @@ render = function(){
     stopScan(); const n = curLesson(), i = UI.ex, e = dfEx(n, i);
     if (!e) { UI.view = 'saisie'; return _dfRender(); }
     setTop(`${DFX[e.t].ico} ${e.t === 'aventuriers' ? dfBoardName(e) : DF_TEST(e.t) ? DFX[e.t].n + ' · ' + DF_PROTO[dfProto(e)].n : DFX[e.t].n}`, `${className()} · Leçon ${n} · exercice ${i + 1}`, `<button class="btn small" data-action="go" data-view="saisie">▦ Leçon</button>`);
-    const V = DF_VIEWS[e.t]; $('#main').innerHTML = `<div class="df-exhead card"><div><b>${esc(dfExSummary(e))}</b>${DF_FRAC(e.t) || e.t === 'eval' ? `<br><span class="df-pilfocus">🎯 Pilier${dfLessonPil(n).length > 1 ? 's' : ''} observé${dfLessonPil(n).length > 1 ? 's' : ''} : ${esc(dfPilNames(dfLessonPil(n)))}</span>` : ''}</div><button class="btn small" data-action="dfFiche" data-t="${e.t}" data-n="${n}" data-i="${i}">📖 Fiche</button></div>` + (V ? V.view(n, i, e) : `<div class="card warn-card"><h3>❓ Cette tablette ne connaît pas cette situation</h3><p>Elle a été programmée avec une version plus récente de l'appli. Connectez la tablette à Internet et rechargez la page (ou rouvrez l'appli) pour la mettre à jour, puis rescannez le QR de la leçon.</p></div>`);
+    const V = DF_VIEWS[e.t]; $('#main').innerHTML = `<div class="df-exhead card"><div><b>${esc(dfExSummary(e))}</b>${dfObsOn(n, e) ? `<br><span class="df-pilfocus">🎯 Pilier${dfLessonPil(n).length > 1 ? 's' : ''} observé${dfLessonPil(n).length > 1 ? 's' : ''} : ${esc(dfPilNames(dfLessonPil(n)))}</span>` : ''}</div><button class="btn small" data-action="dfFiche" data-t="${e.t}" data-n="${n}" data-i="${i}">📖 Fiche</button></div>` + (V ? V.view(n, i, e) + (dfObsOn(n, e) && !DF_FRAC(e.t) && e.t !== 'eval' ? dfObsPanel(n, i, e) : '') : `<div class="card warn-card"><h3>❓ Cette tablette ne connaît pas cette situation</h3><p>Elle a été programmée avec une version plus récente de l'appli. Connectez la tablette à Internet et rechargez la page (ou rouvrez l'appli) pour la mettre à jour, puis rescannez le QR de la leçon.</p></div>`);
     if (V && V.bind) V.bind(n, i, e); return;
   }
   _dfRender();
 };
+/* panneau d'observation des piliers, pour les exercices sans colonne 👀 (tests, jeux, courses d'équipe…) */
+function dfObsPanel(n, i, e){
+  const L = dfExList(n, i, e);
+  return `<div class="card df-obsp"><h3 style="margin:0 0 4px">👀 Observation des piliers</h3>
+    <p class="muted" style="margin:0 0 8px">🎯 Pilier${dfLessonPil(n).length > 1 ? 's' : ''} de la leçon : <b>${esc(dfPilNames(dfLessonPil(n)))}</b>. Après la course, touchez le coureur que vous avez observé (✓ = déjà observé).</p>
+    <div class="lchips">${L.map(s => { const np = Object.values((dfX(n, s.id, i) || {}).pil || {}).filter(o => dfPilMean(o) != null).length;
+      return `<button class="chip ${np ? 'on' : ''}" data-action="dfPilOpen" data-sid="${s.id}" data-i="${i}">${np ? '✓ ' : '👀 '}${esc(nameOf(s.id))}</button>`; }).join('')}</div></div>`;
+}
 /* accueil de la saisie : les exercices de la leçon, puis les fiches élèves */
 const _dfViewSaisie = viewSaisie;
 viewSaisie = function(){
@@ -399,3 +403,6 @@ Object.assign(ACT, {
     if (d.a === 'next') { const st = dfTimerState(T); if (st.k < (T.phases || []).length) { T.acc = dfTNow(T) + st.left + 0.05; T.t0 = performance.now() / 1000; } }   // phase suivante
     rerender(); },
 });
+/* migration au démarrage (jeux retirés en 2.8) */
+const _dfLoadRoot = loadRoot;
+loadRoot = function(){ _dfLoadRoot(); try { dfMigrate28(); save(); } catch (err) { console.warn('migration 2.8', err); } };

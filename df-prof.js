@@ -67,21 +67,11 @@ const DF_SCHEMA = {
   chrono:[ { k:'d', l:'Distance', u:'m', min:50, max:10000, st:50, edit:true }, { k:'nb', l:'Courses par élève', u:'', min:1, max:4, st:1 },
     { k:'dep', l:'Départ', def:'commun', opts:[['commun', '🏁 Départ commun'], ['af', '🏁 All finishers (arrivée tous ensemble)']] },
     { k:'pct', l:'Allure visée (All finishers : temps visé de chaque coureur)', u:'% VMA', def:90, min:60, max:120, st:5, when: e => e.dep === 'af' } ],
-  kart:[ { k:'modele', l:'Cartes en jeu (modèle de leçon)', opts:Object.entries(DF_KART_MOD).map(([k, M]) => [k, M.t]) },
-    { k:'circ', l:'Circuit (forme de travail des manches)', opts:Object.entries(DF_KCIRC).map(([k, C]) => [k, `${C.ico} ${C.n} · ${C.d}`]) },
-    { k:'pct', l:'Allure contrat', u:'% VMA', min:60, max:120, st:5 }, { k:'beep', l:'Un bip toutes les', u:'s', min:5, max:60, st:5 },
-    { k:'gp', l:'Nombre de Grand Prix (les rôles tournent)', u:'', min:1, max:8, st:1 }, { k:'taille', l:'Pilotes par écurie', u:'', min:3, max:5, st:1 },
-    { k:'form', l:'Constitution des écuries', opts:[['equi', 'VMA équilibrées'], ['proche', 'VMA proches'], ['alea', 'Aléatoire'], ['libre', 'À la main']] } ],
-  loups:[ { k:'modele', l:'Leçon type (cartes en jeu et nuits)', opts:DF_LMOD.map((M, k) => [k, M.t]) }, { k:'nuits', l:'Nuits (durée et allure)', nuits:true },
-    { k:'jour', l:'Durée du jour (débat et vote)', u:'min', min:1, max:5, st:1 }, { k:'sig', l:'Un signal toutes les', u:'s', min:15, max:60, st:15 },
-    { k:'pd', l:'Espacement des plots', u:'m', min:10, max:50, st:5 }, { k:'tol', l:'Tolérance (contrat tenu à ± … plot)', u:'plot', min:0, max:3, st:1 },
-    { k:'son', l:'Signal', opts:[['sifflet', '📣 Sifflet'], ['hurlement', '🐺 Hurlement'], ['gong', '🔔 Gong']] } ],
   eval:[ { k:'d', l:'Distance', u:'m', min:300, max:800, st:50 }, { k:'nb', l:'Courses', u:'', min:2, max:4, st:1 }, { k:'rec', l:'Récupération', u:'min', min:3, max:15, st:1 } ],
 };
 const dfStepper = (act, attrs, disp) => `<div class="stepper"><button class="cbtn" data-action="${act}" ${attrs} data-d="-1">−</button><b class="df-sv">${disp}</b><button class="cbtn" data-action="${act}" ${attrs} data-d="1">+</button></div>`;
 function dfSchemaRows(n, i, e){
   return (DF_SCHEMA[e.t] || []).filter(f => !f.when || f.when(e)).map(f => { const a = `data-n="${n}" data-i="${i}" data-k="${f.k}"`;
-    if (f.nuits) return `<div class="form-row"><span>${esc(f.l)}<br><small class="muted">signal toutes les ${e.sig || 30} s · un plot tous les ${e.pd || 20} m</small></span><button class="btn small" data-action="dfLNuits" ${a}>${esc((e.nuits || []).map(([d, p]) => `${d} min à ${p} %`).join(' · ') || 'aucune')} ✎</button></div>`;
     if (f.bool) return `<div class="form-row"><span>${esc(f.l)}</span><button class="btn small ${e[f.k] ? 'green' : ''}" data-action="dfPB" ${a}>${e[f.k] ? '✓ Oui' : 'Non'}</button></div>`;
     if (f.seg) return `<div class="form-row"><span>${esc(f.l)}<br><small class="muted">1 tronçon du plateau = cette distance (${dfSegTours(e)} tour(s) de ${dfLap()} m)</small></span><div class="row">${dfStepper('dfSeg', a, dfSegM(e) + ' m')}<button class="btn small" data-action="dfSegSet" ${a}>✎</button></div></div>`;
     const val = e[f.k] ?? f.def;
@@ -91,7 +81,7 @@ function dfSchemaRows(n, i, e){
 function dfFracEditor(n, i, e){
   const a = k => `data-n="${n}" data-i="${i}" data-k="${k}"`, ch = (k, v, l, cur) => `<button class="ch ${cur === v ? 'on' : ''}" data-action="dfFO" ${a(k)} data-v="${v}" ${cur === v ? 'style="background:var(--navy);border-color:var(--navy);color:#fff"' : ''}>${l}</button>`;
   const ex = [12, 14, 16].map(v => `VMA ${v} : ${dfRepTarget(e, 0, v, false).txt}`).join(' · ');
-  return `${e.t === 'zf' ? `<div class="form-row"><span>🧟 Mission (histoire racontée par la radio du camp)</span><div class="choices">${DF_ZMIS.map((M, k) => `<button class="ch ${(e.mission || 0) === k ? 'on' : ''}" data-action="dfPO" data-n="${n}" data-i="${i}" data-k="mission" data-v="${k}" ${(e.mission || 0) === k ? 'style="background:var(--navy);border-color:var(--navy);color:#fff"' : ''}>${M.ico} ${esc(M.t)}</button>`).join('')}</div></div>` : ''}<div class="form-row"><span>Formes proposées</span><div class="choices">${DF_FORMES[e.t].map((f, k) => `<button class="ch ${e.forme === f.n ? 'on' : ''}" data-action="dfForm" data-n="${n}" data-i="${i}" data-f="${k}" ${e.forme === f.n ? 'style="background:var(--orange);border-color:var(--orange);color:#fff"' : ''}>${esc(f.n)}</button>`).join('')}</div></div>
+  return `<div class="form-row"><span>Formes proposées</span><div class="choices">${DF_FORMES[e.t].map((f, k) => `<button class="ch ${e.forme === f.n ? 'on' : ''}" data-action="dfForm" data-n="${n}" data-i="${i}" data-f="${k}" ${e.forme === f.n ? 'style="background:var(--orange);border-color:var(--orange);color:#fff"' : ''}>${esc(f.n)}</button>`).join('')}</div></div>
     <div class="form-row"><span>Je fixe</span><div class="choices">${ch('mode', 'dist', '📏 la distance → temps calculé', e.mode)}${ch('mode', 'temps', '⏱ le temps → distance calculée', e.mode)}</div></div>
     ${e.steps && e.steps.length ? `<div class="form-row"><span>Pyramide (${e.mode === 'dist' ? 'm' : 's'})</span><button class="btn small" data-action="dfSteps" data-n="${n}" data-i="${i}">${e.steps.join(' - ')} ✎</button></div>`
       : `<div class="form-row"><span>${e.mode === 'dist' ? 'Distance de course' : 'Temps de course'}</span>${dfStepper('dfFS', a('val'), e.mode === 'dist' ? fmtN(e.val, 0) + ' m' : dfT(e.val))}</div>
@@ -101,7 +91,7 @@ function dfFracEditor(n, i, e){
       ${dfStepper('dfFS', a('rec.val'), e.rec.unite === 'dist' ? fmtN(e.rec.val, 0) + ' m' : dfT(e.rec.val))}</div>
     <div class="form-row"><span>Séries</span>${dfStepper('dfFS', a('series'), e.series)}</div>
     ${e.series > 1 ? `<div class="form-row"><span>Récupération entre séries</span>${dfStepper('dfFS', a('recS'), dfT(e.recS))}</div>` : ''}
-    <div class="form-row"><span>Piliers notés par l'observateur</span><div class="choices">${ch('pil', 'serie', 'à la fin de chaque série', e.pil)}${ch('pil', 'fin', 'une fois, en fin d\'exercice', e.pil)}${ch('pil', 'rep', 'à chaque répétition', e.pil)}</div></div>
+    ${dfObs(e) ? `<div class="form-row"><span>Piliers notés par l'observateur</span><div class="choices">${ch('pil', 'serie', 'à la fin de chaque série', e.pil)}${ch('pil', 'fin', 'une fois, en fin d\'exercice', e.pil)}${ch('pil', 'rep', 'à chaque répétition', e.pil)}</div></div>` : ''}
     <p class="muted">Exemple de cibles : ${esc(ex)}. Un élève en petite forme (appel) court à ${e.pct - 10} %.</p>`;
 }
 function dfComposer(n, i, e){
@@ -160,11 +150,17 @@ function dfProfPlan0(){
         <button class="btn small ghost" data-action="dfXmv" data-n="${n}" data-i="${i}" data-d="1" ${i < E.length - 1 ? '' : 'disabled'}>↓</button><button class="btn small ghost" data-action="dfXdel" data-n="${n}" data-i="${i}">🗑</button></div></div>
       <p class="muted">${esc(dfExSummary(e))}</p>
       ${DF_FRAC(e.t) ? dfFracEditor(n, i, e) : DF_TEST(e.t) ? dfTestEditor(n, i, e) : dfSchemaRows(n, i, e)}
+      ${dfObsRow(n, i, e)}
       ${dfWhoRow(n, i, e)}
-      ${['equipe', 'aventuriers', 'pelotons', 'kart'].includes(e.t) ? `<details class="df-compd" ${UI.dfComp === n + '-' + i ? 'open' : ''}><summary data-action="dfComp" data-k="${n}-${i}"><b>🧩 ${e.t === 'pelotons' ? 'Séries' : e.t === 'kart' ? 'Écuries' : 'Équipes'}${e.t === 'aventuriers' ? ' et parcours' : ''}</b></summary>${UI.dfComp === n + '-' + i ? dfComposer(n, i, e) : ''}</details>` : ''}
+      ${['equipe', 'aventuriers', 'pelotons'].includes(e.t) ? `<details class="df-compd" ${UI.dfComp === n + '-' + i ? 'open' : ''}><summary data-action="dfComp" data-k="${n}-${i}"><b>🧩 ${e.t === 'pelotons' ? 'Séries' : 'Équipes'}${e.t === 'aventuriers' ? ' et parcours' : ''}</b></summary>${UI.dfComp === n + '-' + i ? dfComposer(n, i, e) : ''}</details>` : ''}
       ${DF_GRPT(e.t) ? `<div class="form-row"><span>🧩 Groupes pour cet exercice<br><small class="muted">${dfNbG(e) < 2 ? 'toute la classe ensemble' : DF_FRAC(e.t) ? 'passages : Série 1 · groupe 1, Série 1 · groupe 2…' : 'un groupe court, l\'autre observe…'}</small></span>${dfStepper('dfNbG', `data-n="${n}" data-i="${i}"`, dfNbG(e) < 2 ? 'aucun' : dfNbG(e) + ' groupes')}</div>
         ${dfNbG(e) > 1 ? `<details class="df-compd" ${UI.dfComp === n + '-' + i ? 'open' : ''}><summary data-action="dfComp" data-k="${n}-${i}"><b>🧩 Composer les ${dfNbG(e)} groupes</b> <small class="muted">${e.eq && Object.keys(e.eq).length ? '✓ composition enregistrée' : 'proposition automatique'}</small></summary>${UI.dfComp === n + '-' + i ? dfComposer(n, i, e) : ''}</details>` : ''}` : ''}</div>`).join('')}
     ${E.length < 4 ? `<div class="card"><b>＋ Ajouter un exercice</b><div class="df-exgrid">${Object.entries(DFX).map(([t, X]) => `<button class="df-exbtn" style="--xc:${X.c}" data-action="dfXadd" data-n="${n}" data-t="${t}"><span class="ico">${X.ico}</span><b>${esc(X.n)}</b></button>`).join('')}</div></div>` : '<p class="muted">4 exercices au maximum par leçon.</p>'}`;
+}
+/* observer les piliers dans cet exercice : oui / non */
+function dfObsRow(n, i, e){
+  const o = dfObs(e), a = `data-n="${n}" data-i="${i}"`, B = (v, l, on) => `<button class="ch ${on ? 'on' : ''}" data-action="dfObsT" ${a} data-v="${v}" ${on ? 'style="background:var(--navy);border-color:var(--navy);color:#fff"' : ''}>${l}</button>`;
+  return `<div class="form-row"><span>👀 Observer les piliers dans cet exercice<br><small class="muted">${!o ? 'pas d\'observation : l\'exercice ne compte pas pour la partie « observateur » du fil rouge' : dfLessonPil(n).length ? 'piliers de la leçon : ' + esc(dfPilNames(dfLessonPil(n))) : '⚠️ aucun pilier choisi pour cette leçon (plus haut)'}</small></span><div class="choices">${B(1, '👀 Oui', o)}${B(0, 'Non', !o)}</div></div>`;
 }
 /* élèves concernés par l'exercice : toute la classe ou une sélection (rattrapage d'un test…) */
 function dfWhoRow(n, i, e){
@@ -271,13 +267,6 @@ const DF_BILAN = {
 DF_BILAN.chrono = (n, i, e) => `<table class="tbl"><thead><tr><th>Élève</th><th>VMA</th>${Array.from({ length: e.nb || 1 }, (_, k) => `<th>${(e.nb || 1) > 1 ? 'Course ' + (k + 1) : fmtN(e.d, 0) + ' m'}</th>`).join('')}</tr></thead><tbody>${dfRowsP(n, i, s => { const x = dfX(n, s.id, i) || {}, r = dfVmaRef(n, s.id, i);
     return `<tr><td class="nm">${band(s.id)}${esc(nameOf(s.id))}</td><td>${r ? fmtN(r.v, 1) : '—'}</td>${Array.from({ length: e.nb || 1 }, (_, k) => { const t = ((x.c || [])[k] || {}).t; return `<td>${x.ab ? '🚩 ' : ''}${t ? `<b>${dfMSs(t)}</b><br><small>${fmtN(e.d / t * 3.6, 1)} km/h${r ? ' · ' + fmtN(dfPctOf(e.d, t, r.v), 0) + ' % VMA' : ''}</small>` : '—'}</td>`; }).join('')}</tr>`; })}</tbody></table>`;
 DF_BILAN.bats = DF_BILAN.cooper; DF_BILAN.fl = DF_BILAN.fc;
-DF_BILAN.zf = (n, i, e) => DF_BILAN.fc(n, i, e) + `<h4>🏕️ Le camp</h4><table class="tbl"><thead><tr><th>Survivant</th><th>🎒 Ressources</th><th>🩹 Griffures</th><th>Statut</th></tr></thead><tbody>${dfRowsP(n, i, s => { const x = dfX(n, s.id, i) || {}, z = dfZState(x);
-  return `<tr><td class="nm">${band(s.id)}${esc(nameOf(s.id))}</td><td>${z.res}</td><td>${z.griffes}</td><td>${x.zc ? '🧟‍♂️ Chasseur' : z.inf ? '🤢 Infecté' : z.cured ? '💉 Guéri' : '🧑 Humain'}</td></tr>`; })}</tbody></table>`;
-DF_BILAN.kart = (n, i, e) => { const Es = dfKEcs(n, i, e);
-  return `<table class="tbl"><thead><tr><th>Écurie</th><th>Pilote</th><th>🪙 Pièces</th><th>FC</th><th>Borg</th><th>Ce que je change</th></tr></thead><tbody>${Es.map(E => E.m.map((sid, k) => { const x = dfX(n, sid, i) || {}, pl = x.pl || {};
-    return `<tr>${k ? '' : `<td rowspan="${E.m.length}"><span class="dot" style="background:${E.c}"></span> ${esc(E.name)}<br><b>🪙 ${dfKEcCo(n, i, E)}</b> · 🤝 ${dfKFair(n, i, E)}</td>`}<td class="nm">${band(sid)}${esc(nameOf(sid))}</td><td><b>${dfKCo(n, i, sid)}</b></td><td>${pl.fc || '—'}</td><td>${pl.borg || '—'}</td><td>${pl.chg ? esc(pl.chg) : '—'}</td></tr>`; }).join('')).join('')}</tbody></table>`; };
-DF_BILAN.loups = (n, i, e) => `<table class="tbl"><thead><tr><th>Élève</th><th>Rôle</th><th>Statut</th>${(e.nuits || []).map(([d, p], k) => `<th>Nuit ${k + 1}<br><small>${d} min à ${p} %</small></th>`).join('')}<th>Distance</th></tr></thead><tbody>${dfRowsP(n, i, s => { const x = dfX(n, s.id, i) || {}, c = dfLCard(x.role), S_ = DF_LSTATUS[x.st || 'humain'];
-  return `<tr><td class="nm">${band(s.id)}${esc(nameOf(s.id))}</td><td>${c ? c.ico + ' ' + esc(c.titre) : '—'}</td><td>${S_[0]} ${S_[1]}</td>${(e.nuits || []).map((_, mi) => { const r = dfLReg(n, i, e, s.id, mi); return `<td>${r && r.n ? `${r.tenus}/${r.n} ${r.ok ? '✅' : '❌'}<br><small>régularité ${r.pct} %</small>` : '—'}</td>`; }).join('')}<td>${dfKm(dfExDist(n, s.id, i))}</td></tr>`; })}</tbody></table>`;
 
 /* =====================================================================
    ÉVALUATION : blocs séparés
@@ -286,7 +275,7 @@ const dfInterp = (x, t) => x == null ? null : Math.round(interp(t, x) * 4) / 4;
 function dfAllEx(upTo){ const a = []; for (let l = 1; l <= (upTo || S.settings.nbLessons); l++) dfExs(l).forEach((e, i) => a.push({ l, i, e })); return a; }
 const dfLessonHeld = l => Object.keys(S.results[l] || {}).length > 0;
 /* ---------- Briques des fils (valeurs de 0 à 1, null si rien à évaluer) ---------- */
-const dfFracLike = e => DF_FRAC(e.t) || e.t === 'eval';                         // exercices où l'on observe un camarade
+const dfFracLike = e => dfObs(e);                                                // exercices où l'on observe un camarade (choix par exercice)
 /* coureur : exercices faits sans abandon (régularité) et cibles des fractionnés (qualité) */
 function dfInvRunner(sid, X){
   const slots = X.filter(x => dfLessonHeld(x.l) && dfPresent(x.l, sid) && dfConc(x.e, sid)), ok = slots.filter(x => { const o = dfX(x.l, sid, x.i); return o && !o.ab; });
@@ -418,21 +407,14 @@ Object.assign(ACT, {
     if (d.q === 'novma') sortedStudents().forEach(s => { if (!dfVmaRef(n, s.id, i)) w.add(s.id); });
     if (d.q === 'abs') sortedStudents().forEach(s => { if (isOff(attOf(n - 1, s.id))) w.add(s.id); });
     e.who = sortedStudents().map(s => s.id).filter(id => w.has(id)); delete e.eq; dfSaveP(); },
-  dfPS: d => { const n = +d.n, i = +d.i, e = dfEditL(n).ex[i], f = DF_SCHEMA[e.t].find(x => x.k === d.k); e[d.k] = r10(Math.max(f.min, Math.min(f.max, (+(e[d.k] ?? f.def) || 0) + +d.d * f.st)), 2); if (e.t === 'kart' && d.k === 'taille') delete e.eq; dfSaveP(); },
+  dfPS: d => { const n = +d.n, i = +d.i, e = dfEditL(n).ex[i], f = DF_SCHEMA[e.t].find(x => x.k === d.k); e[d.k] = r10(Math.max(f.min, Math.min(f.max, (+(e[d.k] ?? f.def) || 0) + +d.d * f.st)), 2); dfSaveP(); },
   dfPO: async d => { const n = +d.n, i = +d.i, e = dfEditL(n).ex[i], v = isFinite(+d.v) && d.v !== '' ? +d.v : d.v; if (e[d.k] === v) return;
     if (d.k === 'plat') { const used = sortedStudents().some(s => ((dfX(n, s.id, i) || {}).buys || []).length);
       if (used && !(await confirmBox('Changer de plateau ?', 'Des trajets ont déjà été saisis sur l\'ancien plateau : ils ne correspondront plus à la carte.', 'Changer'))) return;
       delete e.parc; }
     e[d.k] = v;
-    if (e.t === 'loups' && d.k === 'modele') { const M = DF_LMOD[v] || DF_LMOD[0]; e.nuits = dfClone(M.nuits); e.jour = M.jour; }
-    if (e.t === 'kart' && d.k === 'modele') { e.circ = (DF_KART_MOD[v] || DF_KART_MOD.bonus).circ; e.pct = DF_KCIRC[e.circ].pct; }
-    if (e.t === 'kart' && d.k === 'circ') e.pct = DF_KCIRC[v].pct;
-    if (e.t === 'kart' && d.k === 'taille') delete e.eq;
     dfSaveP(); },
-  dfLNuits: async d => { const n = +d.n, i = +d.i, e = dfEditL(n).ex[i];
-    const t = await textBox('Nuits : « durée en min / % de VMA » séparées par des espaces (ex. 3/70 3/72 4/75)', (e.nuits || []).map(([a, b]) => `${a}/${b}`).join(' ')); if (t == null) return;
-    const N = t.split(/[\s;]+/).map(x => x.split('/').map(v => parseFloat(v.replace(',', '.')))).filter(q => q.length === 2 && q[0] > 0 && q[0] <= 20 && q[1] >= 50 && q[1] <= 110);
-    if (!N.length) return toast('⚠️ Format attendu : 3/70 3/72 4/75'); e.nuits = N; dfSaveP(); },
+  dfObsT: d => { const e = dfEditL(+d.n).ex[+d.i]; e.obs = d.v === '1'; dfSaveP(); },
   dfSeg: d => { const n = +d.n, i = +d.i, e = dfEditL(n).ex[i]; e.seg = Math.max(25, Math.min(3000, dfSegM(e) + +d.d * 25)); dfSaveP(); },
   dfSegSet: async d => { const n = +d.n, i = +d.i, e = dfEditL(n).ex[i]; const v = await numberBox('Distance d\'un tronçon (m)', dfSegM(e), { step: 1, min: 25, max: 3000, unit: 'm' }); if (v == null) return; e.seg = Math.round(v); dfSaveP(); },
   dfV0: d => { const n = +d.n, i = +d.i, e = dfEditL(n).ex[i]; e.v0 = Math.max(6, Math.min(12, (e.v0 || 8) + +d.d * 0.5)); dfSaveP(); },

@@ -1,6 +1,6 @@
 # Demi-fond N'EPS
 
-CA1 · Demi-fond · performance auto-référencée · Quentin Delisle · socle N'EPS 1.3.0 · **v2.7.0**
+CA1 · Demi-fond · performance auto-référencée · Quentin Delisle · socle N'EPS 1.3.0 · **v2.8.0**
 
 ## Fichiers
 
@@ -10,9 +10,7 @@ CA1 · Demi-fond · performance auto-référencée · Quentin Delisle · socle N
 | `df-core.js` | piste, programmation multi-exercices, VMA de référence, piliers, comptes à rebours, fusion des saisies |
 | `df-exos.js` | écrans : test VMA (demi-Cooper ou VAMEVAL) / Bats tes perfs, course d'équipe, pelotons, fractionnés, évaluation 3 × 500 m |
 | `df-aventuriers.js`, `df-plateau.js`, `aventuriers/plateau_44.jpg`, `plateau_france.jpg`, `plateau_europe.jpg` | Run Express (ex-« Les Aventuriers du … ») : plateau au choix Loire-Atlantique, France, Europe |
-| `df-jeux.js` | sons et voix de la tablette, 🧟 Zombie Frac' |
-| `df-kart.js` | 🏎️ Kart'Endurance |
-| `df-loups.js` | 🐺 Gare aux loups |
+| `df-sons.js` | sifflet et voix de la tablette (appel des départs All finishers) |
 | `df-prof.js` | espace enseignant : programmation, VMA, piliers enseignant, bilan, évaluation par blocs |
 | `df-fiches.js` | fiches 📖 des exercices (rédigées pour les élèves de seconde ; fractionnés : schéma de la piste avec les plots de couleur calculés d'après la VMA des élèves), classe de démonstration, styles |
 | le reste | socle N'EPS (inchangé) |
@@ -68,11 +66,7 @@ Nouvelles situations à ajouter dans la Programmation des leçons (le cycle par 
 
 - **🚂 Run Express** : nouveau nom des « Aventuriers du … » (mêmes plateaux, mêmes règles ; les saisies déjà faites restent valables).
 - **🏁 All finishers** (Course chronométrée → Départ) : temps visé de chaque coureur à X % de sa VMA (−10 % en petite forme) ; le plus lent part au top, les autres avec le retard nécessaire pour que tout le monde arrive ensemble. Ordre des départs affiché et annoncé, prénom appelé 10 s avant et au départ (sifflet), temps compté depuis le départ de chacun, écart au temps visé (vert ±3 %, orange ±6 %), ordre d'arrivée et écart premier–dernier.
-- **🧟 Zombie Frac'** : un fractionné (mêmes formes, cibles, groupes Série 1 · Rouge / Série 1 · Bleu, piliers) raconté comme une fuite : 3 missions, messages radio à voix haute, 🏃 échappé / 🩹 griffé / 🧟 rattrapé, infection et antidote, zombie chasseur (+10 %), camp qui se construit avec les ressources de la classe. Compte comme un fractionné (cibles, fil rouge).
-- **🏎️ Kart'Endurance** : écuries (🧩), rôles tournants à chaque Grand Prix, circuit = forme des manches, bip régulier, boîte à objets (cartes Bonus / Malus / Kart, 3 en main), pièces par élève, fair-play, classements, tableau de bord des pilotes (FC, Borg, ce que je change), cartes inventées par les élèves, cartes à imprimer.
-- **🐺 Gare aux loups** : 6 leçons types, nuits à allure imposée avec signal (sifflet, hurlement ou gong), tirage des rôles et « passe la tablette », défis et missions secrètes, statuts (mordu, guéri, révélé), grille du gardien du temps (contrat tenu = droit de vote), plots par signal, indices, vote à main levée ou secret avec révélation, cartes à imprimer.
-- Voix de la tablette : bouton 🔊 / 🔇 dans les jeux (réglage propre à chaque tablette).
-- Pioche, mains, votes et journal restent sur la tablette qui anime ; les pièces, rôles, statuts et plots relevés de chaque élève remontent avec 📤 / 📥.
+- Voix de la tablette : bouton 🔊 / 🔇 dans All finishers (réglage propre à chaque tablette).
 
 ## Nouveautés 2.7 (socle N'EPS 1.5)
 
@@ -80,3 +74,14 @@ Nouvelles situations à ajouter dans la Programmation des leçons (le cycle par 
 - **🧰 Ma leçon** : les outils dans l'ordre du déroulement, avec un bouton « Suivant » : ✏️ Réglages → 🏃 **Programme de la leçon** (les exercices de la leçon et leurs réglages) → ✅ Appel → 🎭 Rôles → 📲 QR → ✍️ Saisie → ⏱ Outils → 📥 Récupérer → 🏁 Bilan de la leçon (avec « 🏃 Bilan des exercices » et « ▶ Préparer la leçon suivante »). Sélecteur de leçon 1…8 en haut, sans quitter l'outil ouvert.
 - « 🏁 Marquer la leçon terminée » : simple repère (✅ dans Mes leçons), rien n'est figé.
 - Le reste du socle 1.5 : envoi des fiches d'une leçon précédente pas encore envoyées, outil 🪞 miroir différé disponible (non activé).
+
+## Nouveautés 2.7.1
+
+- **👀 Observer les piliers : choix par exercice** (Programmation → chaque exercice → « 👀 Observer les piliers dans cet exercice : Oui / Non »). Par défaut : oui pour les fractionnés et l'évaluation 3 × 500 m (comme avant), non pour les autres. Les piliers observés restent choisis pour la leçon.
+- Exercice observé sans colonne 👀 (test VMA, Bats tes perfs, course d'équipe, pelotons, Run Express, course chronométrée) : panneau « 👀 Observation des piliers » en bas de l'écran ; touchez le coureur observé.
+- Fractionné non observé : la colonne 👀 disparaît. La partie « observateur » du fil rouge ne compte que les exercices observés. « · 👀 piliers » s'affiche dans le résumé des exercices observés.
+
+## Version 2.8.0
+
+- Zombie Frac', Kart'Endurance et Gare aux loups sont retirés. Au démarrage, une leçon programmée avec Zombie Frac' le retrouve comme fractionné (court ou long selon sa forme, mêmes réglages) ; Kart'Endurance et Gare aux loups sont enlevés de la programmation.
+- Restent de la 2.6 : Run Express (nouveau nom des Aventuriers) et le départ All finishers de la course chronométrée.

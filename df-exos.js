@@ -21,7 +21,7 @@ function dfPropose(n, i, e, mode, nb){
   } else { L.sort((a, b) => b.v - a.v); L.forEach((x, k) => { const r = Math.floor(k / nb), c = k % nb; out[x.id] = r % 2 ? nb - 1 - c : c; }); }   // équilibrées (serpentin)
   return out;
 }
-const dfNbTeams = (n, e) => DF_GRPT(e.t) ? dfNbG(e) : e.t === 'aventuriers' ? Math.max(1, Math.floor(sortedStudents().filter(s => dfPresent(n, s.id) && dfConc(e, s.id)).length / (e.taille || 2))) : e.t === 'pelotons' ? e.ns : e.nbEq;
+const dfNbTeams = (n, e) => DF_GRPT(e.t) ? dfNbG(e) : e.t === 'kart' ? Math.max(2, Math.round(sortedStudents().filter(s => dfPresent(n, s.id) && dfConc(e, s.id)).length / (e.taille || 4))) : e.t === 'aventuriers' ? Math.max(1, Math.floor(sortedStudents().filter(s => dfPresent(n, s.id) && dfConc(e, s.id)).length / (e.taille || 2))) : e.t === 'pelotons' ? e.ns : e.nbEq;
 function dfTeams(n, i, e){
   if (e.eq && Object.keys(e.eq).length) return dfWho(e) ? Object.fromEntries(Object.entries(e.eq).filter(([sid]) => dfConc(e, sid))) : e.eq;
   const m = e.t === 'pelotons' ? 'proche' : (e.form === 'libre' ? 'equi' : e.form) || (DF_FRAC(e.t) ? 'proche' : 'equi');
@@ -30,7 +30,7 @@ function dfTeams(n, i, e){
 const dfTeamOf = (n, i, e, sid) => dfTeams(n, i, e)[sid];
 const DF_TCOL = COLORS.filter(c => c.k !== 'blanc');
 const dfTeamCol = t => DF_TCOL[t % DF_TCOL.length];
-const dfTeamName = (e, t) => `${e.t === 'pelotons' ? 'Série' : e.t === 'aventuriers' ? (e.taille === 3 ? 'Trinôme' : 'Binôme') : DF_GRPT(e.t) ? 'Groupe' : 'Équipe'} ${dfTeamCol(t).n}`;
+const dfTeamName = (e, t) => `${e.t === 'pelotons' ? 'Série' : e.t === 'kart' ? 'Écurie' : e.t === 'aventuriers' ? (e.taille === 3 ? 'Trinôme' : 'Binôme') : DF_GRPT(e.t) ? 'Groupe' : 'Équipe'} ${dfTeamCol(t).n}`;
 function dfTabChips(e){
   const nb = e.tabs || 1; if (nb < 2) return '';
   const cur = Math.min(ROOT.dfTab || 0, nb - 1);
@@ -279,20 +279,24 @@ function dfFracView(n, i, e){
   const P = all ? null : PS[pi], cols = [];
   for (let s = 0; s < (e.series || 1); s++) if (all || s === P.s) R.forEach((v, k) => cols.push({ s, k }));
   const list = all ? dfExList(n, i, e) : dfPassList(n, P, e);
-  const key = all ? `f${n}-${i}` : `f${n}-${i}-s${P.s}-g${P.g ?? 'x'}`, ph = all ? dfFracPhases(e) : dfFracPhasesS(e, P.s);
+  const key = all ? `f${n}-${i}` : `f${n}-${i}-s${P.s}-g${P.g ?? 'x'}`, Z = e.t === 'zf', ph = (p => Z ? dfZPhases(p) : p)(all ? dfFracPhases(e) : dfFracPhasesS(e, P.s)), CM = Z ? DF_ZCELL : DF_CELL;
+  if (Z) dfZHook(key, e);
   const pc = p => p.g != null ? dfTeamCol(p.g).c : '#0B346E', nx = !all && PS[pi + 1];
   const pilTxt = !dfLessonPil(n).length ? '' : e.pil === 'rep' ? 'Piliers : à chaque répétition.' : e.pil === 'serie' ? 'Piliers : à la fin de chaque série (👀).' : 'Piliers : une fois, en fin d\'exercice.';
   let h = `<div class="filters df-pass"><b>Passage :</b>${PS.map((p, q) => `<button class="chip ${!all && q === pi ? 'on' : ''}" style="--pc:${pc(p)}" data-action="dfFp" data-k="${n}-${i}" data-p="${q}"><span class="dot" style="background:${pc(p)}"></span>${esc(dfPassName(e, p))}${dfPassDone(n, i, e, p) ? ' ✓' : ''}</button>`).join('')}
       <button class="chip ${all ? 'on' : ''}" data-action="dfFp" data-k="${n}-${i}" data-p="all">▦ Tout voir</button></div>
     ${all ? dfGrpChips(n, i, e) : ''}
     ${e.mode === 'temps' ? dfTimerHTML(key, ph, { color: all ? null : (P.g != null ? dfTeamCol(P.g).c : null) }) : e.rec.unite === 'temps' ? dfTimerHTML(key, [{ n:'Récupération', s: e.rec.val }]) : ''}
-    <p class="muted">${all ? '' : `<b>${esc(dfPassName(e, P))}</b> : ${list.length} coureur(s). `}Cible de chaque coureur d'après sa VMA (😓 = petite forme, −10 % de VMA). Touchez une case après chaque répétition : ✓ cible atteinte · ≈ presque · ✗ non atteinte. ${pilTxt}</p>
-    <div class="card scroll-x"><table class="tbl df-mat"><thead><tr><th>Coureur</th>${cols.map(c => `<th>${e.series > 1 ? 'S' + (c.s + 1) + '·' : ''}${c.k + 1}<br><small>${e.mode === 'dist' ? fmtN(R[c.k], 0) + ' m' : dfT(R[c.k])}</small></th>`).join('')}<th>👀</th><th>🚩</th></tr></thead><tbody>
+    ${Z ? dfZBanner(key) : ''}
+    <p class="muted">${all ? '' : `<b>${esc(dfPassName(e, P))}</b> : ${list.length} ${Z ? 'survivant' : 'coureur'}(s). `}Cible de chaque coureur d'après sa VMA (😓 = petite forme, −10 % de VMA${Z ? ' · 🧟‍♂️ = zombie chasseur, +10 %' : ''}). ${Z ? 'Touchez une case après chaque fuite : 🏃 échappé (cible atteinte, +1 ressource) · 🩹 griffé (presque) · 🧟 rattrapé (non atteinte).' : 'Touchez une case après chaque répétition : ✓ cible atteinte · ≈ presque · ✗ non atteinte.'} ${pilTxt}</p>
+    <div class="card scroll-x"><table class="tbl df-mat"><thead><tr><th>${Z ? 'Survivant' : 'Coureur'}</th>${cols.map(c => `<th>${e.series > 1 ? 'S' + (c.s + 1) + '·' : ''}${Z ? '🧟' : ''}${c.k + 1}<br><small>${e.mode === 'dist' ? fmtN(R[c.k], 0) + ' m' : dfT(R[c.k])}</small></th>`).join('')}${Z ? '<th>🎒</th><th>Statut</th>' : ''}<th>👀</th><th>🚩</th></tr></thead><tbody>
     ${list.map(st => { const sid = st.id, x = dfX(n, sid, i) || {}, ref = dfVmaRef(n, sid, i), fo = dfForme(n, sid), pk = all ? null : dfPilKeyOf(e, P.s), np = all || e.pil === 'fin' || e.pil === 'rep' ? Object.keys(x.pil || {}).length : (dfPilMean((x.pil || {})[pk]) != null ? '✓' : 0);
-      return `<tr class="${x.ab ? 'abd' : ''}"><td class="nm">${band(sid)}<div><b>${esc(nameOf(sid))}</b><br><small>${ref ? fmtN(ref.v, 1) + ' km/h · ' + (e.pct - (fo ? 10 : 0)) + ' %' : 'pas de VMA'}</small>
-        <button class="df-fo ${fo ? 'on' : ''}" data-action="dfForme" data-sid="${sid}" title="Petite forme : −10 %">😓</button></div></td>
-        ${cols.map(c => { const v = ((x.r || [])[c.s] || [])[c.k], tg = ref ? dfRepTarget(e, c.k, ref.v, fo) : null;
-          return `<td><button class="df-cell" data-action="dfCell" data-sid="${sid}" data-i="${i}" data-s="${c.s}" data-k="${c.k}" style="${v != null ? `background:${DF_CELL[v].c};color:#fff` : ''}">${v != null ? DF_CELL[v].s : ''}<small>${tg ? (e.mode === 'dist' ? dfT(tg.t) : tg.d == null ? '' : fmtN(Math.round(tg.d / 5) * 5, 0) + ' m') : ''}</small></button></td>`; }).join('')}
+      const pl = dfZPlus(e, x), zs = Z ? dfZState(x) : null;
+      return `<tr class="${x.ab ? 'abd' : ''} ${zs && zs.inf ? 'df-zinf' : ''}"><td class="nm">${band(sid)}<div><b>${esc(nameOf(sid))}</b><br><small>${ref ? fmtN(ref.v, 1) + ' km/h · ' + (e.pct - (fo ? 10 : 0) + pl) + ' %' : 'pas de VMA'}</small>
+        <button class="df-fo ${fo ? 'on' : ''}" data-action="dfForme" data-sid="${sid}" title="Petite forme : −10 %">😓</button>${Z ? `<button class="df-fo ${x.zc ? 'on' : ''}" data-action="dfZc" data-sid="${sid}" data-i="${i}" title="Zombie chasseur : lièvre à +10 %, part 2 plots derrière">🧟‍♂️</button>` : ''}</div></td>
+        ${cols.map(c => { const v = ((x.r || [])[c.s] || [])[c.k], tg = ref ? dfRepTarget(e, c.k, ref.v, fo, pl) : null;
+          return `<td><button class="df-cell" data-action="dfCell" data-sid="${sid}" data-i="${i}" data-s="${c.s}" data-k="${c.k}" style="${v != null ? `background:${CM[v].c};color:#fff` : ''}">${v != null ? CM[v].s : ''}<small>${tg ? (e.mode === 'dist' ? dfT(tg.t) : tg.d == null ? '' : fmtN(Math.round(tg.d / 5) * 5, 0) + ' m') : ''}</small></button></td>`; }).join('')}
+        ${Z ? `<td><b>${zs.res}</b></td><td>${x.zc ? '🧟‍♂️ Chasseur' : zs.inf ? '🤢 Infecté' : zs.cured ? '💉 Guéri' : '🧑 Humain'}</td>` : ''}
         <td>${dfLessonPil(n).length ? `<button class="btn small ${np ? 'green' : ''}" data-action="dfPilOpen" data-sid="${sid}" data-i="${i}" ${pk ? `data-pk="${pk}"` : ''}>👀${np ? ' ' + np : ''}</button>` : ''}</td><td>${dfAbBtn(n, i, sid)}</td></tr>`; }).join('')}
     </tbody></table></div>
     ${nx ? `<div class="btn-row spread"><span class="muted">${dfPassDone(n, i, e, P) ? '✓ Passage complet.' : ''}${e.pil === 'serie' && dfLessonPil(n).length ? ' N\'oubliez pas les piliers (👀) de fin de série.' : ''}</span><button class="btn primary" data-action="dfFp" data-k="${n}-${i}" data-p="${pi + 1}">Passage suivant : ${esc(dfPassName(e, nx))} ▶</button></div>` : ''}`;
@@ -350,6 +354,7 @@ DF_LINE.eval = (n, sid, i, e) => { const S_ = dfEvScore(n, sid, i, e); if (!S_) 
    ===================================================================== */
 const dfMSs = s => { if (s == null || !isFinite(s)) return '—'; const m = Math.floor(s / 60), r = s - m * 60, rs = (Math.round(r * 10) / 10).toFixed(1).replace('.', ','); return m ? `${m} min ${r < 10 ? '0' : ''}${rs} s` : `${rs} s`; };
 function dfChronoView(n, i, e){
+  if (e.dep === 'af') return dfAfView(n, i, e);
   const nb = e.nb || 1, k = UI.dfK != null && UI.dfK < nb ? UI.dfK : 0, g = dfSelG(n, i), key = `c${n}-${i}-${g ?? 'all'}-${k}`, c = dfChr(key), list = dfExList(n, i, e);
   return `${dfGrpChips(n, i, e)}${nb > 1 ? `<div class="filters"><b>Course :</b>${Array.from({ length: nb }, (_, q) => `<button class="chip ${q === k ? 'on' : ''}" data-action="dfK" data-k="${q}">${q + 1}</button>`).join('')}</div>` : ''}
     <p class="muted">Distance : <b>${fmtN(e.d, 0)} m</b>. Départ commun avec ▶, puis 🏁 à l'arrivée de chaque coureur. Ou saisissez le temps (minutes et secondes) avec ✎.</p>
@@ -359,6 +364,61 @@ function dfChronoView(n, i, e){
         <div class="btn-row">${cc.t ? '' : `<button class="btn green df-fin" data-action="dfFin" data-sid="${s.id}" data-i="${i}" data-k="${k}" data-key="${key}" ${c.run ? '' : 'disabled'}>🏁 Arrivée</button>`}
           <button class="btn small" data-action="dfCTms" data-sid="${s.id}" data-i="${i}" data-k="${k}">✎ ${cc.t ? 'Modifier' : 'Saisir'} le temps</button></div>${dfAbBtn(n, i, s.id)}`, { cls: x.ab ? 'abd' : '' }); }).join('')}</div>`;
 }
+
+/* =====================================================================
+   ALL FINISHERS : départs calculés pour que tout le monde arrive ensemble
+   Temps visé de chaque coureur = distance à e.pct % de sa VMA (−10 % en petite forme).
+   Le plus lent part au top ; chaque autre part avec (temps visé le plus long − son temps visé) de retard.
+   Si chacun tient son temps visé, tout le monde franchit la ligne en même temps.
+   ===================================================================== */
+const dfAfPct = (n, sid, e) => (e.pct || 90) - (dfForme(n, sid) ? 10 : 0);
+function dfAfPlan(n, i, e, list){
+  const R = list.map(s => { const ref = dfVmaRef(n, s.id, i), tv = ref ? dfTime(e.d, ref.v, dfAfPct(n, s.id, e)) : null; return { sid: s.id, tv: tv == null ? null : Math.round(tv) }; });
+  const mx = Math.max(0, ...R.map(r => r.tv || 0));
+  R.forEach(r => { r.off = r.tv == null ? 0 : mx - r.tv; });
+  return { R: R.sort((a, b) => a.off - b.off || (nameOf(a.sid) > nameOf(b.sid) ? 1 : -1)), mx };
+}
+const dfAfEcart = (t, tv) => t == null || !tv ? null : (t - tv) / tv * 100;
+const dfAfCol = p => p == null ? '' : Math.abs(p) <= 3 ? '#1E8E3E' : Math.abs(p) <= 6 ? '#F59E0B' : '#D0161B';
+const dfSgn = v => (v > 0 ? '+' : v < 0 ? '−' : '±') + fmtN(Math.abs(v), 0);
+function dfAfView(n, i, e){
+  const nb = e.nb || 1, k = UI.dfK != null && UI.dfK < nb ? UI.dfK : 0, g = dfSelG(n, i), key = `c${n}-${i}-${g ?? 'all'}-${k}`, c = dfChr(key);
+  const list = dfExList(n, i, e), P = dfAfPlan(n, i, e, list), el = dfChrNow(c);
+  c.af = P.R.filter(r => !((dfX(n, r.sid, i) || {}).ab)).map(r => ({ sid: r.sid, off: r.off, nm: nameOf(r.sid) }));
+  const arr = P.R.map(r => { const cc = (((dfX(n, r.sid, i) || {}).c || [])[k]) || {}; return { ...r, t: cc.t, at: cc.t != null ? (cc.af ?? r.off) + cc.t : null }; }).filter(r => r.at != null).sort((a, b) => a.at - b.at);
+  const spread = arr.length > 1 ? arr[arr.length - 1].at - arr[0].at : null, noV = P.R.filter(r => r.tv == null);
+  return `${dfGrpChips(n, i, e)}${nb > 1 ? `<div class="filters"><b>Course :</b>${Array.from({ length: nb }, (_, q) => `<button class="chip ${q === k ? 'on' : ''}" data-action="dfK" data-k="${q}">${q + 1}</button>`).join('')}</div>` : ''}
+    <div class="card df-af"><h3 style="margin:0 0 6px">🏁 All finishers · ${fmtN(e.d, 0)} m à ${e.pct || 90} % de VMA</h3>
+      <p class="muted" style="margin:0">Les plus lents partent les premiers. Si chacun tient son temps visé, <b>tout le monde arrive ensemble</b>. Au top, le premier groupe part ; ensuite la tablette siffle et annonce chaque prénom au moment de son départ (et 10 s avant). Touchez 🏁 quand le coureur passe la ligne : son temps est calculé depuis <b>son</b> départ.</p>
+      ${noV.length ? `<p class="warn-card card" style="margin:8px 0 0">⚠️ Sans VMA (départ au top, sans temps visé) : ${noV.map(r => esc(nameOf(r.sid))).join(', ')}</p>` : ''}</div>
+    ${dfChrHTML(key)}<div class="df-afnext" data-afnext="${key}">${dfAfNextTxt(c, el)}</div>
+    <div class="card scroll-x"><div class="btn-row spread"><h3 style="margin:0">📋 Ordre des départs</h3><button class="btn small" data-action="dfAfSay" data-key="${key}">📣 Annoncer l'ordre</button></div>
+      <table class="tbl df-aftbl"><thead><tr><th>Départ</th><th>Coureur</th><th>Temps visé</th><th>Arrivée</th><th>Écart</th></tr></thead><tbody>
+      ${P.R.map(r => { const x = dfX(n, r.sid, i) || {}, cc = (x.c || [])[k] || {}, ec = dfAfEcart(cc.t, r.tv);
+        return `<tr class="${x.ab ? 'abd' : ''}"><td><b>${r.off ? '+' + dfT(r.off) : 'au top'}</b></td><td class="nm">${band(r.sid)}${esc(nameOf(r.sid))}${dfForme(n, r.sid) ? ' 😓' : ''}</td><td>${r.tv ? dfT(r.tv) : '—'}</td>
+          <td>${cc.t ? `<b>${dfMSs(cc.t)}</b>` : `<span data-afw="${key}" data-off="${r.off}">${dfAfWait(c, el, r.off)}</span>`}</td><td>${ec == null ? '' : `<b style="color:${dfAfCol(ec)}">${dfSgn(cc.t - r.tv)} s</b> <small>(${dfSgn(ec)} %)</small>`}</td></tr>`; }).join('')}</tbody></table></div>
+    <div class="tiles df-wide">${P.R.map(r => { const s = { id: r.sid }, x = dfX(n, r.sid, i) || {}, cc = (x.c || [])[k] || {}, ec = dfAfEcart(cc.t, r.tv);
+      return dfTile(s.id, `<span class="df-big" style="font-size:30px;${ec != null ? 'color:' + dfAfCol(ec) : ''}">${cc.t ? dfMSs(cc.t) : '—'}</span>
+        <span class="meta">${r.tv ? `Temps visé <b>${dfT(r.tv)}</b> · départ ${r.off ? '+' + dfT(r.off) : 'au top'}` : 'pas de VMA · départ au top'}${ec != null ? ` · écart <b>${dfSgn(cc.t - r.tv)} s</b>` : ''}</span>
+        <div class="btn-row">${cc.t ? '' : `<button class="btn green df-fin" data-action="dfAfFin" data-sid="${r.sid}" data-i="${i}" data-k="${k}" data-key="${key}" data-off="${r.off}" data-tv="${r.tv || ''}" ${c.run ? '' : 'disabled'}>🏁 Arrivée</button>`}
+          <button class="btn small" data-action="dfCTms" data-sid="${r.sid}" data-i="${i}" data-k="${k}">✎ ${cc.t ? 'Modifier' : 'Saisir'} le temps</button></div>${dfAbBtn(n, i, r.sid)}`, { cls: x.ab ? 'abd' : '' }); }).join('')}</div>
+    ${arr.length ? `<div class="card"><h3 style="margin:0 0 6px">🏁 Ordre d'arrivée</h3><ol class="df-afarr">${arr.map(r => { const ec = dfAfEcart(r.t, r.tv); return `<li>${band(r.sid)}<b>${esc(nameOf(r.sid))}</b> · ${dfMSs(r.t)}${ec != null ? ` · <b style="color:${dfAfCol(ec)}">${dfSgn(r.t - r.tv)} s</b>` : ''}</li>`; }).join('')}</ol>
+      ${spread != null ? `<p class="df-afsp">Écart entre le premier et le dernier arrivé : <b>${dfT(spread)}</b>${spread <= 10 ? ' 🎉 la classe a très bien géré son allure !' : spread <= 30 ? ' 👍 allure plutôt bien gérée.' : ''}</p>` : ''}</div>` : ''}`;
+}
+function dfAfWait(c, el, off){ if (!c.run && !el) return off ? 'part à +' + dfT(off) : 'part au top'; const w = off - el; return w > 0 ? `⏳ part dans ${dfT(w)}` : `🏃 en course · ${dfT(-w)}`; }
+function dfAfNextTxt(c, el){
+  if (!c.af || !c.af.length) return ''; const up = c.af.filter(a => a.off > el + 0.05); if (!c.run) return el ? '' : `Au top : ${c.af.filter(a => !a.off).map(a => esc(a.nm)).join(', ') || '—'}`;
+  if (!up.length) return '✓ Tout le monde est parti'; const o = up[0].off, who = up.filter(a => a.off === o).map(a => esc(a.nm)).join(', ');
+  return `Prochain départ : <b>${who}</b> dans <b>${dfT(o - el)}</b>`;
+}
+/* appel des départs : coup de sifflet + prénom, et prévenir 10 s avant */
+setInterval(() => { Object.entries(DFC).forEach(([key, c]) => { if (!c.run || !c.af) return; const el = dfChrNow(c), pv = c._afp ?? -1;
+  const at = d => c.af.filter(a => a.off - d > 0.01 && a.off - d > pv && a.off - d <= el);
+  const go = at(0); if (go.length) { dfSnd.whistle(); dfSay(go.map(a => a.nm).join(', ') + (go.length > 1 ? ', partez !' : ', pars !')); }
+  else { const soon = at(10); if (soon.length) dfSay(soon.map(a => a.nm).join(', ') + ', dans 10 secondes'); }
+  c._afp = el;
+  const nx = document.querySelector(`[data-afnext="${key}"]`); if (nx) nx.innerHTML = dfAfNextTxt(c, el);
+  document.querySelectorAll(`[data-afw="${key}"]`).forEach(sp => { sp.textContent = dfAfWait(c, el, +sp.dataset.off); }); }); }, 250);
 DF_VIEWS.chrono = { view: dfChronoView };
 DF_LINE.chrono = (n, sid, i, e) => { const x = dfX(n, sid, i); if (!x) return ''; const T = (x.c || []).filter(c => c && c.t).map(c => c.t);
   return `<div class="muted">${T.length ? T.map(t => `${dfMSs(t)} (${fmtN(e.d / t * 3.6, 1)} km/h)`).join(' · ') : '—'}</div>`; };
@@ -392,7 +452,13 @@ Object.assign(ACT, {
   dfTabSel: d => { ROOT.dfTab = +d.k; save(); rerender(); },
   dfSer: d => { UI.dfSer = +d.s; rerender(); },
   dfK: d => { UI.dfK = +d.k; rerender(); },
-  dfChr: d => { const c = dfChr(d.key); if (d.a === 'go') { c.t0 = performance.now() / 1000; c.run = true; beepGo(); keepAwake(true); } else { c.run = false; keepAwake(false); } rerender(); },
+  dfChr: d => { const c = dfChr(d.key); if (d.a === 'go') { c.t0 = performance.now() / 1000; c.run = true; c._afp = -1; beepGo(); keepAwake(true); if (c.af && c.af.some(a => !a.off)) dfSay(c.af.filter(a => !a.off).map(a => a.nm).join(', ') + ', partez !'); } else { c.run = false; keepAwake(false); } rerender(); },
+  dfAfFin: d => { const c = dfChr(d.key); if (!c.run) return; const n = curLesson(), e = dfEx(n, +d.i), off = +d.off || 0, t = r10(dfChrNow(c) - off, 2);
+    if (t <= 0) return toast(`⏳ ${nameOf(d.sid)} n'est pas encore parti`);
+    if (e && t < e.d / (26 / 3.6)) return toast('⚠️ Temps impossible (plus de 26 km/h) : attendez l\'arrivée');
+    dfSetX(n, d.sid, +d.i, o => { o.c = o.c || []; o.c[+d.k] = { ...(o.c[+d.k] || {}), t, af: off, ...(d.tv ? { tv: +d.tv } : {}) }; }); beepShort(); rerender(); },
+  dfAfSay: d => { const c = dfChr(d.key); if (!c.af || !c.af.length) return; const G = {}; c.af.forEach(a => (G[a.off] = G[a.off] || []).push(a.nm));
+    dfSay('Ordre des départs. ' + Object.entries(G).sort((a, b) => a[0] - b[0]).map(([o, L]) => (+o ? `À ${dfSayT(+o)} : ` : 'Au top : ') + L.join(', ')).join('. ') + '.'); toast('📣 Ordre des départs annoncé'); },
   dfFin: d => { const c = dfChr(d.key); if (!c.run) return; const t = r10(dfChrNow(c), 2), n = curLesson(), e = dfEx(n, +d.i);
     if (e && t < e.d / (26 / 3.6)) return toast('⚠️ Temps impossible (plus de 26 km/h) : attendez l\'arrivée');
     dfSetX(n, d.sid, +d.i, o => { o.c = o.c || []; o.c[+d.k] = { ...(o.c[+d.k] || {}), t }; }); beepShort(); rerender(); },

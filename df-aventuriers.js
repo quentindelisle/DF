@@ -1,5 +1,6 @@
 /* =====================================================================
-   DEMI-FOND N'EPS — Les Aventuriers du … (jeu de relais en binômes / trinômes)
+   DEMI-FOND N'EPS — Run Express (ex-« Les Aventuriers du … ») : jeu de relais en binômes / trinômes
+   Identifiant interne inchangé : 'aventuriers' (les saisies déjà faites restent valables)
    Plateau au choix (Loire-Atlantique, France, Europe). 1 tronçon = une distance
    réglée en mètres par l'enseignant (par défaut 1 tour de piste). Le coureur court
    X tronçons puis « achète » un trajet de X tronçons sur la carte de son équipe.

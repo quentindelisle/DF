@@ -11,16 +11,19 @@
 const DFX = {
   cooper:{ n:'Test VMA', ico:'⏱️', c:'#0B346E' },
   bats:{ n:'Bats tes perfs', ico:'🔥', c:'#D0161B' },
-  aventuriers:{ n:'Les Aventuriers du …', ico:'🗺️', c:'#1FA24A' },
+  aventuriers:{ n:'Run Express', ico:'🚂', c:'#1FA24A' },
   equipe:{ n:'Course d\'équipe', ico:'🤝', c:'#8A2BE2' },
   pelotons:{ n:'Course en pelotons', ico:'🐇', c:'#F7941D' },
   fc:{ n:'Fractionné court', ico:'⚡', c:'#0088E8' },
   fl:{ n:'Fractionné long', ico:'🔁', c:'#00897B' },
   eval:{ n:'Évaluation 3 × 500 m', ico:'📝', c:'#B5514C' },
   chrono:{ n:'Course chronométrée', ico:'🏁', c:'#5B6B8C' },
+  zf:{ n:'Zombie Frac\'', ico:'🧟', c:'#6B2E2E' },
+  kart:{ n:'Kart\'Endurance', ico:'🏎️', c:'#1C6ED6' },
+  loups:{ n:'Gare aux loups', ico:'🐺', c:'#3B2A7A' },
 };
 const DF_TEST = t => t === 'cooper' || t === 'bats';
-const DF_FRAC = t => t === 'fc' || t === 'fl';
+const DF_FRAC = t => t === 'fc' || t === 'fl' || t === 'zf';      // Zombie Frac' = un fractionné raconté comme une fuite
 const DF_TEAM = t => t === 'equipe' || t === 'aventuriers';
 
 /* Formes de travail proposées pour les fractionnés */
@@ -41,6 +44,7 @@ const DF_FORMES = {
     { n:'Pyramide 1-2-3-2-1 min', mode:'temps', steps:[60, 120, 180, 120, 60], pct:90, rec:{ type:'active', unite:'temps', val:60 }, series:1, reps:5, recS:0 },
   ],
 };
+DF_FORMES.zf = [...DF_FORMES.fc, ...DF_FORMES.fl];
 function dfxDefault(t){
   const b = { t };
   if (DF_TEST(t)) return { ...b, dur:360, proto:'cooper', v0:8 };
@@ -48,8 +52,10 @@ function dfxDefault(t){
   if (t === 'equipe') return { ...b, dur:12, nbEq:4, form:'equi', tabs:1, pauses:false };
   if (t === 'pelotons') return { ...b, d:500, nb:3, ns:3, rec:5 };
   if (t === 'eval') return { ...b, d:500, nb:3, rec:10 };
-  if (t === 'chrono') return { ...b, d:1000, nb:1 };
-  if (DF_FRAC(t)) { const f = dfClone(DF_FORMES[t][0]); return { ...b, forme:f.n, ...f, pil:'serie' }; }
+  if (t === 'chrono') return { ...b, d:1000, nb:1, dep:'commun', pct:90 };
+  if (t === 'kart') return { ...b, modele:'bonus', circ:'champi', pct:100, beep:15, gp:4, taille:4, form:'equi' };
+  if (t === 'loups') return { ...b, modele:0, nuits:[[3, 70], [3, 72], [3, 75], [3, 75]], jour:2, sig:30, pd:20, tol:1, son:'sifflet' };
+  if (DF_FRAC(t)) { const f = dfClone(DF_FORMES[t][0]); return { ...b, forme:f.n, ...f, pil:'serie', ...(t === 'zf' ? { mission:0 } : {}) }; }
   return b;
 }
 const dfClone = o => JSON.parse(JSON.stringify(o));
@@ -57,9 +63,9 @@ const dfClone = o => JSON.parse(JSON.stringify(o));
 /* ---------- Cycle par défaut (8 leçons) ---------- */
 const DF_DEF = {
   1:{ title:'Test VMA et course d\'équipe', ex:['cooper', 'equipe'], pil:['effort'] },
-  2:{ title:'Fractionné court et Aventuriers du …', ex:['fc', 'aventuriers'], pil:['foulee'] },
+  2:{ title:'Fractionné court et Run Express', ex:['fc', 'aventuriers'], pil:['foulee'] },
   3:{ title:'Bats tes perfs et pelotons', ex:['bats', 'pelotons'], pil:['effort'] },
-  4:{ title:'Fractionné long et Aventuriers du …', ex:['fl', 'aventuriers'], pil:['posture'] },
+  4:{ title:'Fractionné long et Run Express', ex:['fl', 'aventuriers'], pil:['posture'] },
   5:{ title:'Pyramide et course d\'équipe', ex:[['fc', 4], 'equipe'], pil:['bras'] },
   6:{ title:'Fractionné long et pelotons', ex:[['fl', 1], 'pelotons'], pil:['regard'] },
   7:{ title:'Préparer l\'évaluation', ex:[['fc', 3], 'pelotons'], pil:['effort'] },
@@ -114,7 +120,7 @@ const dfGroupList = () => sortedStudents().filter(s => ROOT.grp == null || ROOT.
 const dfWho = e => e && Array.isArray(e.who) ? e.who : null;
 const dfConc = (e, sid) => { const w = dfWho(e); return !w || w.includes(sid); };
 /* groupes propres à chaque exercice (tests, fractionnés, évaluation, course chronométrée) : e.nbG, e.form, e.eq */
-const DF_GRPT = t => ['cooper', 'bats', 'fc', 'fl', 'eval', 'chrono'].includes(t);
+const DF_GRPT = t => ['cooper', 'bats', 'fc', 'fl', 'zf', 'eval', 'chrono'].includes(t);
 const dfNbG = e => DF_GRPT(e.t) ? Math.max(1, e.nbG || 1) : 1;
 const dfSelG = (n, i) => UI.dfGk === `${n}-${i}` ? UI.dfG : null;
 function dfExList(n, i, e){
@@ -235,7 +241,8 @@ function dfExDist(n, sid, i){
   if (e.t === 'equipe') return (x.laps || []).length * lap;
   if (e.t === 'aventuriers') return dfAvSegs(e, x.buys) * dfSegM(e);
   if (e.t === 'pelotons' || e.t === 'eval' || e.t === 'chrono') return (x.c || []).filter(c => c && c.t).length * e.d;
-  if (DF_FRAC(e.t)) { const ref = dfVmaRef(n, sid, i); let d = 0; (x.r || []).forEach(row => (row || []).forEach((v, k) => { if (v != null && v > 0) d += dfRepDist(e, k, ref ? ref.v : null, dfForme(n, sid)) || 0; })); return d; }
+  if (DF_FRAC(e.t)) { const ref = dfVmaRef(n, sid, i), pl = dfZPlus(e, x); let d = 0; (x.r || []).forEach(row => (row || []).forEach((v, k) => { if (v != null && v > 0) d += dfRepDist(e, k, ref ? ref.v : null, dfForme(n, sid), pl) || 0; })); return d; }
+  if (e.t === 'loups') { const G = Object.values(x.g || {}).map(a => vals(a || []).length ? Math.max(...vals(a)) : 0); return G.length ? G.reduce((a, b) => a + b, 0) * (e.pd || 20) : null; }
   return null;
 }
 function dfFracCells(x){ const a = []; (x && x.r || []).forEach(row => (row || []).forEach(v => { if (v != null) a.push(v); })); return a; }
@@ -259,6 +266,8 @@ function dfExDone(n, sid, i){
   if (DF_TEST(e.t)) return dfTestDone(x);
   if (e.t === 'equipe') return (x.laps || []).length > 0;
   if (e.t === 'aventuriers') return (x.buys || []).length > 0;
+  if (e.t === 'kart') return x.co != null || !!x.pl;
+  if (e.t === 'loups') return Object.values(x.g || {}).some(a => vals(a || []).length);
   if (e.t === 'pelotons' || e.t === 'eval' || e.t === 'chrono') return (x.c || []).filter(c => c && c.t).length >= (e.nb || 1);
   if (DF_FRAC(e.t)) return dfFracCells(x).length >= dfRepCount(e);
   return false;
@@ -267,9 +276,11 @@ function dfExDone(n, sid, i){
 /* ---------- Fractionné : répétitions ---------- */
 const dfReps = e => e.steps && e.steps.length ? e.steps : Array.from({ length: e.reps || 1 }, () => e.val);
 const dfRepCount = e => dfReps(e).length * (e.series || 1);
-function dfRepDist(e, k, vma, forme){ const v = dfReps(e)[k]; if (v == null) return null; const pct = e.pct - (forme ? 10 : 0);
+/* Zombie Frac' : le « zombie chasseur » court sa cible à +10 % de VMA */
+const dfZPlus = (e, x) => e && e.t === 'zf' && x && x.zc ? 10 : 0;
+function dfRepDist(e, k, vma, forme, plus){ const v = dfReps(e)[k]; if (v == null) return null; const pct = e.pct - (forme ? 10 : 0) + (plus || 0);
   return e.mode === 'dist' ? v : dfDist(v, vma, pct); }
-function dfRepTarget(e, k, vma, forme){ const v = dfReps(e)[k], pct = e.pct - (forme ? 10 : 0);
+function dfRepTarget(e, k, vma, forme, plus){ const v = dfReps(e)[k], pct = e.pct - (forme ? 10 : 0) + (plus || 0);
   if (e.mode === 'dist') return { txt: `${fmtN(v, 0)} m en ${dfT(dfTime(v, vma, pct))}`, d: v, t: dfTime(v, vma, pct) };
   const d = dfDist(v, vma, pct); return { txt: `${dfT(v)} → ${d == null ? '—' : fmtN(Math.round(d / 5) * 5, 0) + ' m'}`, d, t: v }; }
 const dfRecTxt = e => `${e.rec.type === 'active' ? 'Récup active' : 'Récup passive'} ${e.rec.unite === 'dist' ? fmtN(e.rec.val, 0) + ' m' : dfT(e.rec.val)}`;
@@ -281,13 +292,15 @@ function dfFracSummary(e){
 function dfExSummary(e){ const s = dfExSummary0(e), w = dfWho(e); return w ? `${s} · 👥 ${w.length} élève${w.length > 1 ? 's' : ''}` : s; }
 function dfExSummary0(e){
   if (!e) return '';
-  if (e.t === 'chrono') return `${e.nb > 1 ? e.nb + ' × ' : ''}${fmtN(e.d, 0)} m chronométré${e.nb > 1 ? 's' : ''}`;
+  if (e.t === 'chrono') return `${e.nb > 1 ? e.nb + ' × ' : ''}${fmtN(e.d, 0)} m chronométré${e.nb > 1 ? 's' : ''}${e.dep === 'af' ? ` · 🏁 All finishers à ${e.pct || 90} % VMA` : ''}`;
+  if (e.t === 'kart') return `${(DF_KART_MOD[e.modele] || DF_KART_MOD.bonus).t} · ${dfKCirc(e).ico} ${dfKCirc(e).n} (${dfKCirc(e).reps > 1 ? dfKCirc(e).reps + ' × ' : ''}${dfT(dfKCirc(e).work)}) à ${dfKPct(e)} % VMA · ${e.gp || 4} Grand Prix`;
+  if (e.t === 'loups') return `${(e.nuits || []).length} nuit(s) : ${(e.nuits || []).map(([d, p]) => `${d} min à ${p} %`).join(' · ')} · signal toutes les ${e.sig || 30} s`;
   if (DF_TEST(e.t)) return dfProto(e) === 'vameval' ? `VAMEVAL · départ ${fmtN(e.v0 || 8, 1)} km/h, +0,5 km/h par minute · plots tous les ${fmtN(dfVamStep(), 1)} m` : `Demi-Cooper · 6 min · plots tous les ${fmtN(dfPlotStep(), 0)} m`;
   if (e.t === 'aventuriers') return `${dfBoardName(e)} · ${e.dur} min · ${e.taille === 3 ? 'trinômes' : 'binômes'} · ${e.nbParc} parcours · 1 tronçon = ${dfSegM(e)} m`;
   if (e.t === 'equipe') return `${e.dur} min · ${e.nbEq} équipes · ${e.tabs} tablette(s)`;
   if (e.t === 'pelotons') return `${e.nb} × ${e.d} m · ${e.ns} séries`;
   if (e.t === 'eval') return `${e.nb} × ${e.d} m · récup ${e.rec} min`;
-  if (DF_FRAC(e.t)) return dfFracSummary(e);
+  if (DF_FRAC(e.t)) return (e.t === 'zf' ? `${(DF_ZMIS[e.mission || 0] || DF_ZMIS[0]).ico} ${(DF_ZMIS[e.mission || 0] || DF_ZMIS[0]).t} · ` : '') + dfFracSummary(e);
   return '';
 }
 const dfLessonSummary = n => dfExs(n).map(e => `${DFX[e.t].ico} ${DFX[e.t].n}`).join(' + ') || 'aucun exercice';
@@ -313,7 +326,7 @@ function dfTimerHTML(key, phases, opts = {}){
 }
 setInterval(() => {
   Object.entries(DFT).forEach(([key, T]) => { if (!T.run || !T.phases) return;
-    const st = dfTimerState(T); if (T._k != null && st.k !== T._k) { beepEnd(); if (st.k >= T.phases.length) { T.run = false; T.acc = dfTNow(T); keepAwake(false); } if (UI.view === 'dfx') rerender(); }
+    const st = dfTimerState(T); if (T._k != null && st.k !== T._k) { if (T.onPhase) T.onPhase(st, T); else beepEnd(); if (st.k >= T.phases.length) { T.run = false; T.acc = dfTNow(T); keepAwake(false); } if (UI.view === 'dfx') rerender(); }
     T._k = st.k; const c = Math.ceil(st.left); if (!T.quiet && T._c !== c && c <= 3 && c > 0) beepShort(); T._c = c;
     if (T.onTick) T.onTick(T);
     const el = document.querySelector(`[data-dft="${key}"]`); if (el) { const tt = el.querySelector('[data-dft-t]'), ph = el.querySelector('[data-dft-ph]'); if (tt) tt.textContent = dfMS(st.left); if (ph) ph.textContent = st.name; } });
@@ -377,8 +390,9 @@ Object.assign(ACT, {
   dfG: d => { UI.dfGk = d.k; UI.dfG = d.g === '' ? null : +d.g; UI.dfSel = []; rerender(); },
   dfAb: d => { const n = curLesson(); dfSetX(n, d.sid, +d.i, o => { o.ab = !o.ab; if (!o.ab) delete o.ab; }); rerender(); },
   dfTm: d => { const T = dfTimer(d.key);
-    if (d.a === 'go') { T.t0 = performance.now() / 1000; T.run = true; T._k = dfTimerState(T).k; beepGo(); keepAwake(true); if (T.onGo) T.onGo(); }
+    if (d.a === 'go') { T.t0 = performance.now() / 1000; T.run = true; T._k = dfTimerState(T).k; beepGo(); keepAwake(true); if (T.onGo) T.onGo(T); }
     if (d.a === 'stop') { T.acc = dfTNow(T); T.run = false; keepAwake(false); }
-    if (d.a === 'reset') { T.acc = 0; T.run = false; T._k = null; }
+    if (d.a === 'reset') { T.acc = 0; T.run = false; T._k = null; if (T.onReset) T.onReset(T); }
+    if (d.a === 'next') { const st = dfTimerState(T); if (st.k < (T.phases || []).length) { T.acc = dfTNow(T) + st.left + 0.05; T.t0 = performance.now() / 1000; } }   // phase suivante
     rerender(); },
 });

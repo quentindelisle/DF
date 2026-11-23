@@ -22,6 +22,9 @@ const DFX = {
   kart:{ n:'Kart\'Endurance', ico:'🏎️', c:'#1C6ED6' },
   loups:{ n:'Gare aux loups', ico:'🐺', c:'#3B2A7A' },
 };
+/* situation inconnue (QR envoyé par une version plus récente de l'appli) : message au lieu d'un plantage */
+const DFX_UNKNOWN = { n:'Situation inconnue : mettez l\'appli à jour', ico:'❓', c:'#8A8F99' };
+Object.setPrototypeOf(DFX, new Proxy({}, { get: (t, k) => typeof k === 'string' ? DFX_UNKNOWN : undefined }));
 const DF_TEST = t => t === 'cooper' || t === 'bats';
 const DF_FRAC = t => t === 'fc' || t === 'fl' || t === 'zf';      // Zombie Frac' = un fractionné raconté comme une fuite
 const DF_TEAM = t => t === 'equipe' || t === 'aventuriers';
@@ -341,7 +344,7 @@ render = function(){
     stopScan(); const n = curLesson(), i = UI.ex, e = dfEx(n, i);
     if (!e) { UI.view = 'saisie'; return _dfRender(); }
     setTop(`${DFX[e.t].ico} ${e.t === 'aventuriers' ? dfBoardName(e) : DF_TEST(e.t) ? DFX[e.t].n + ' · ' + DF_PROTO[dfProto(e)].n : DFX[e.t].n}`, `${className()} · Leçon ${n} · exercice ${i + 1}`, `<button class="btn small" data-action="go" data-view="saisie">▦ Leçon</button>`);
-    const V = DF_VIEWS[e.t]; $('#main').innerHTML = `<div class="df-exhead card"><div><b>${esc(dfExSummary(e))}</b>${DF_FRAC(e.t) || e.t === 'eval' ? `<br><span class="df-pilfocus">🎯 Pilier${dfLessonPil(n).length > 1 ? 's' : ''} observé${dfLessonPil(n).length > 1 ? 's' : ''} : ${esc(dfPilNames(dfLessonPil(n)))}</span>` : ''}</div><button class="btn small" data-action="dfFiche" data-t="${e.t}" data-n="${n}" data-i="${i}">📖 Fiche</button></div>` + (V ? V.view(n, i, e) : '');
+    const V = DF_VIEWS[e.t]; $('#main').innerHTML = `<div class="df-exhead card"><div><b>${esc(dfExSummary(e))}</b>${DF_FRAC(e.t) || e.t === 'eval' ? `<br><span class="df-pilfocus">🎯 Pilier${dfLessonPil(n).length > 1 ? 's' : ''} observé${dfLessonPil(n).length > 1 ? 's' : ''} : ${esc(dfPilNames(dfLessonPil(n)))}</span>` : ''}</div><button class="btn small" data-action="dfFiche" data-t="${e.t}" data-n="${n}" data-i="${i}">📖 Fiche</button></div>` + (V ? V.view(n, i, e) : `<div class="card warn-card"><h3>❓ Cette tablette ne connaît pas cette situation</h3><p>Elle a été programmée avec une version plus récente de l'appli. Connectez la tablette à Internet et rechargez la page (ou rouvrez l'appli) pour la mettre à jour, puis rescannez le QR de la leçon.</p></div>`);
     if (V && V.bind) V.bind(n, i, e); return;
   }
   _dfRender();

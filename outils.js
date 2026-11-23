@@ -33,7 +33,7 @@ const TS = {
   tirage:{ drawn:[], cur:null, noRep:true, g:null, anim:false },
   equipes:{ n:+TCFG('equipes').n || 4, mode:'hasard', f:'', teams:null },
   score:{ a:0, b:0, run:false, t0:0, acc:0 },
-  tours:{ run:false, t0:0, laps:{}, g:null },
+  tours:{ run:false, t0:0, laps:{}, g:null }, miroir:{},
 };
 if (TS.interval.rest !== TS.interval.rest) TS.interval.rest = 15;
 const rotAteliers = () => String(TCFG('rotation').ateliers || 'Atelier 1\nAtelier 2\nAtelier 3').split(/\r?\n/).map(x => x.trim()).filter(Boolean);
@@ -47,7 +47,7 @@ function viewTools(){
 function toolStatus(k){ const s = TS[k];
   if (k === 'timer' && s.run) return '⏳ ' + mmss(s.left); if (k === 'chrono' && s.run) return '⏱ en cours';
   if (k === 'interval' && s.run) return (s.phase === 'work' ? '💪 ' : '😮‍💨 ') + mmss(s.left); if (k === 'rotation' && s.run) return '🔄 ' + mmss(s.left);
-  if (k === 'score' && (s.a || s.b)) return `${s.a} – ${s.b}`; if (k === 'tours' && s.run) return '🏃 en cours'; return ''; }
+  if (k === 'score' && (s.a || s.b)) return `${s.a} – ${s.b}`; if (k === 'miroir') return MIR.stream ? '🔴 en cours' : ''; if (k === 'tours' && s.run) return '🏃 en cours'; return ''; }
 
 /* ---------- Horloge commune ---------- */
 setInterval(() => {
@@ -250,6 +250,42 @@ function toursBind(){ $$('[data-tr]').forEach(b => b.onclick = async e => { cons
   rerender(); }); }
 function toursTick(){ if (TS.tours.run) setTxt('tr-t', mmss(trNow())); }
 
+/* ---------- Miroir différé : la caméra filme en continu, l'écran montre l'image d'il y a N secondes ----------
+   (l'élève fait son passage puis vient se voir sur la tablette ; rien n'est enregistré) */
+const MIR = { stream:null, vid:null, frames:[], cap:null, raf:null, delay: +TCFG('miroir').delai || 5, fps:12, facing:'environment', frozen:false, shown:-1 };
+function mirrorStop(){ clearInterval(MIR.cap); cancelAnimationFrame(MIR.raf); if (MIR.stream) MIR.stream.getTracks().forEach(t => t.stop()); MIR.stream = null; MIR.frames = []; MIR.shown = -1; keepAwake(false); }
+async function mirrorStart(){
+  mirrorStop();
+  try { MIR.stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ ideal:MIR.facing }, width:{ ideal:1280 }, height:{ ideal:720 } }, audio:false }); }
+  catch(e){ setTxt('mi-msg', '⚠️ Caméra refusée ou indisponible'); return; }
+  const v = MIR.vid = document.createElement('video'); v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.srcObject = MIR.stream; await v.play().catch(() => {});
+  const cc = document.createElement('canvas'), cx = cc.getContext('2d');
+  MIR.cap = setInterval(() => { if (!v.videoWidth) return; const w = 640, h = Math.round(w * v.videoHeight / v.videoWidth); cc.width = w; cc.height = h; cx.drawImage(v, 0, 0, w, h);
+    const t = performance.now(); cc.toBlob(b => { if (b) MIR.frames.push({ t, b }); const lim = performance.now() - (MIR.delay + 2) * 1000; while (MIR.frames.length && MIR.frames[0].t < lim) MIR.frames.shift(); }, 'image/jpeg', 0.72); }, 1000 / MIR.fps);
+  keepAwake(true);
+  const draw = async () => { const out = document.getElementById('mi-cv'); if (!MIR.stream) return;
+    if (out && !MIR.frozen) { const target = performance.now() - MIR.delay * 1000; let f = null;
+      for (let i = MIR.frames.length - 1; i >= 0; i--) if (MIR.frames[i].t <= target) { f = MIR.frames[i]; break; }
+      if (f && f.t !== MIR.shown) { MIR.shown = f.t; try { const bm = await createImageBitmap(f.b); out.width = bm.width; out.height = bm.height; out.getContext('2d').drawImage(bm, 0, 0); if (bm.close) bm.close(); } catch(e){} }
+      const wait = MIR.frames.length ? MIR.delay - (performance.now() - MIR.frames[0].t) / 1000 : MIR.delay;
+      setTxt('mi-msg', f ? `🔴 Image d'il y a ${MIR.delay} s` : `Mise en mémoire… ${Math.max(1, Math.ceil(wait))} s`); }
+    MIR.raf = requestAnimationFrame(draw); };
+  draw();
+}
+function miroirView(){
+  const on = !!MIR.stream;
+  return `<div class="tool-full"><div class="mi-stage"><canvas id="mi-cv" width="640" height="360"></canvas><div class="mi-msg" id="mi-msg">${on ? '' : 'Touchez « Démarrer » : la tablette filme en continu et montre l\'image avec un retard.'}</div>${MIR.frozen ? '<div class="mi-frozen">⏸ Image figée</div>' : ''}</div>
+    <div class="btn-row center-row">${on ? `<button class="btn red big" data-mi="stop">⏹ Arrêter</button><button class="btn big ${MIR.frozen ? 'orange' : ''}" data-mi="freeze">${MIR.frozen ? '▶ Reprendre' : '⏸ Figer'}</button>` : `<button class="btn green big" data-mi="go">▶ Démarrer</button>`}
+      <button class="btn big" data-mi="cam">🔄 Caméra</button></div>
+    <div class="btn-row center-row"><b>Retard</b>${[2, 3, 5, 8, 10, 15].map(d => `<button class="chip ${MIR.delay === d ? 'on' : ''}" data-mi="d" data-v="${d}">${d} s</button>`).join('')}</div>
+    <p class="muted center">La vidéo n'est ni enregistrée ni envoyée : seules les dernières secondes restent en mémoire.</p></div>`;
+}
+function miroirBind(){ $$('[data-mi]').forEach(b => b.onclick = async () => { const a = b.dataset.mi;
+  if (a === 'go') await mirrorStart(); if (a === 'stop') mirrorStop(); if (a === 'freeze') MIR.frozen = !MIR.frozen;
+  if (a === 'cam') { MIR.facing = MIR.facing === 'environment' ? 'user' : 'environment'; if (MIR.stream) await mirrorStart(); }
+  if (a === 'd') { MIR.delay = +b.dataset.v; MIR.shown = -1; }
+  rerender(); }); }
+
 const TOOL_DEFS = {
   timer:{ n:'Minuteur', ico:'⏳', view:timerView, bind:timerBind, tick:timerTick },
   chrono:{ n:'Chronomètre', ico:'⏱️', view:chronoView, bind:chronoBind, tick:chronoTick },
@@ -259,4 +295,5 @@ const TOOL_DEFS = {
   equipes:{ n:'Équipes', ico:'👥', view:equipesView, bind:equipesBind },
   score:{ n:'Tableau de score', ico:'🏆', view:scoreView, bind:scoreBind, tick:scoreTick },
   tours:{ n:'Compteur de tours', ico:'🏃', view:toursView, bind:toursBind, tick:toursTick },
+  miroir:{ n:'Miroir différé', ico:'🪞', view:miroirView, bind:miroirBind },
 };

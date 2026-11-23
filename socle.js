@@ -32,6 +32,7 @@ function normConfig(c){
   c.tools = c.tools || {}; Object.keys(c.tools).forEach(k => { if (c.tools[k] && c.tools[k].on === false) delete c.tools[k]; });
   c.roles = (c.roles || []).filter(r => r && r.n); c.rotate = c.rotate !== false;
   c.sexe = c.sexe !== false;
+  c.video = c.video ? { delai: +c.video.delai || 5, ralenti: +c.video.ralenti || 0.5 } : null;   // vidéo différée d'un passage
   c.ressources = (c.ressources || []).filter(r => r && r.u).map(r => ({ l: r.l || r.u, u: r.u }));   // liens montrés aux élèves
   c.evalObs = c.evalObs ? { label: c.evalObs.label || 'Mon observateur m\'a aidé', opts: (c.evalObs.opts || [{ l:'Pas aidé', v:1, c:'#D0161B' }, { l:'Un peu', v:2, c:'#F07000' }, { l:'Bien', v:3, c:'#86DC96' }, { l:'Très bien', v:4, c:'#0B4F1C' }]) } : null;
   c.url = c.url || '';                             // adresse en ligne de l'appli (sinon saisie dans l'espace enseignant)                       // colonne F / G (mixité des groupes)
@@ -234,15 +235,22 @@ const on = k => !(ROOT.hide || {})[k];
 const paramVal = p => { const v = S.params?.[p.id]; return v == null || v === '' ? p.def : +v; };
 const shownF = f => !(f.type === 'criteres' && !on('piliers'));
 const tgtOf = (sid, f) => f.target && on('cibles') ? targetOf(sid, f) : null;
+/* Chaque case saisie (une saisie, ou un essai d'une saisie) garde l'heure de sa dernière modification :
+   r.b = heure de base, r.t[saisie] = dixièmes de seconde depuis r.b (tableau par essai).
+   La fusion se fait CASE PAR CASE : un élève peut saisir sur plusieurs tablettes et l'enseignant en dépannage. */
+function touch(r, key, k){
+  if (!r.b) r.b = now(); r.t = r.t || {}; const rel = Math.max(0, Math.round((now() - r.b) / 100)) + 1;
+  if (k == null) r.t[key] = rel; else { const a = Array.isArray(r.t[key]) ? r.t[key] : (r.t[key] = []); a[k] = rel; }
+}
 function setRes(n, sid, fn){
   S.results[n] = S.results[n] || {};
   const r = S.results[n][sid] = S.results[n][sid] || { v:{} };
-  fn(r); r.ts = now(); r.d = ROOT.deviceId; save();
+  fn(r); r.ts = now(); r.d = ROOT.deviceId; r.s = 0; save();       // s = 0 : modifié depuis le dernier envoi
 }
 function setVal(n, sid, f, k, v){
   setRes(n, sid, r => {
-    if (f.per === 'try') { const a = r.v[f.id] = r.v[f.id] || []; while (a.length < tries(n)) a.push(null); a[k] = v; }
-    else r.v[f.id] = v;
+    if (f.per === 'try') { const a = r.v[f.id] = r.v[f.id] || []; while (a.length < tries(n)) a.push(null); a[k] = v; touch(r, f.id, k); }
+    else { r.v[f.id] = v; touch(r, f.id); }
   });
 }
 /* Critères observés : tableau [1 validé | 0 non validé | null non observé] → % de critères validés */
@@ -766,20 +774,22 @@ function go(view, opts={}){ Object.assign(UI, opts); UI.view = view; render(); w
 function rerender(){ const y = window.scrollY; render(); window.scrollTo(0, y); }
 const homeBtn = `<button class="btn small" data-action="go" data-view="home">⌂ Accueil</button>`;
 const menuBtn = `<button class="btn small" data-action="tab" data-tab="menu">☰ Menu</button>`;
+const hubBtn = () => `<button class="btn small" data-action="tab" data-tab="hub">🧰 ${SEANCE ? 'Ma séance' : 'Leçon ' + curLesson()}</button>`;
 function render(){
   stopScan();
   let v = UI.view; const m = $('#main');
+  if (typeof MIR !== 'undefined' && MIR.stream && !(v === 'tool' && UI.tool === 'miroir')) mirrorStop();   // caméra du miroir coupée en quittant l'outil
   if (!ROOT.role) { setTop(CFG.name, 'Choix du rôle de la tablette'); m.innerHTML = viewRole(); return; }
   const prof = isProf();
   if (!prof && !['home','saisie','entry','send','receive','tools','tool'].includes(v)) v = UI.view = 'home';
   if (prof && !UI.profUnlocked && !['home','tools','tool','saisie','entry'].includes(v)) v = UI.view = 'home';
   if (prof && UI.profUnlocked && v === 'home') { v = UI.view = 'prof'; UI.profTab = 'menu'; }
   if (v === 'home') { setTop(CFG.name, prof ? 'Tablette enseignant' : 'Tablette élève'); m.innerHTML = prof ? viewHomeProfLocked() : viewHomeEleve(); }
-  else if (v === 'saisie') { setTop('Saisie · ' + lessonLabel(curLesson()), className(), prof && UI.profUnlocked ? menuBtn : homeBtn); m.innerHTML = viewSaisie(); }
-  else if (v === 'tools') { setTop('🧰 Outils', className(), prof && UI.profUnlocked ? menuBtn : homeBtn); m.innerHTML = viewTools(); }
+  else if (v === 'saisie') { setTop('Saisie · ' + lessonLabel(curLesson()), className(), prof && UI.profUnlocked ? hubBtn() : homeBtn); m.innerHTML = viewSaisie(); }
+  else if (v === 'tools') { setTop('🧰 Outils', className(), prof && UI.profUnlocked ? hubBtn() : homeBtn); m.innerHTML = viewTools(); }
   else if (v === 'tool') { const T = TOOL_DEFS[UI.tool]; setTop(T.ico + ' ' + T.n, className(), `<button class="btn small" data-action="go" data-view="tools">🧰 Outils</button>`); m.innerHTML = T.view(); T.bind && T.bind(); }
   else if (v === 'entry') { setTop(nameOf(UI.sid), lessonLabel(curLesson()), `<button class="btn small" data-action="go" data-view="saisie">▦ Élèves</button>`); m.innerHTML = viewEntry(); bindEntry(); }
-  else if (v === 'prof') { setTop(UI.profTab === 'menu' ? 'Espace enseignant' : ((UI.profTab === 'filrouge' ? frTabName() : PTABS[UI.profTab]?.n) || (UI.profTab === 'frDetail' ? frTabName() + ' · ' + nameOf(UI.sid) : '')), className() + ' · ' + lessonLabel(curLesson()), UI.profTab === 'menu' ? `<button class="btn small" data-action="lock" title="Verrouiller">🔒</button>` : menuBtn); m.innerHTML = viewProf(); afterProf(); }
+  else if (v === 'prof') { const t = UI.profTab, sec = sectOf(t); setTop(t === 'menu' || !sec ? 'Espace enseignant' : PSECT[sec].t + ' · ' + (t === 'frDetail' ? frTabName() + ' · ' + nameOf(UI.sid) : tabName(t)), className() + ' · ' + lessonLabel(curLesson()), t === 'menu' || !sec ? `<button class="btn small" data-action="lock" title="Verrouiller">🔒</button>` : menuBtn); m.innerHTML = viewProf(); afterProf(); }
   else if (v === 'send') { setTop('Envoyer mes saisies', 'QR code à scanner par l\'enseignant', homeBtn); m.innerHTML = viewSend(); afterSend(); }
   else if (v === 'receive') { setTop('Recevoir la ' + LECON, 'QR affiché par l\'enseignant', homeBtn); m.innerHTML = viewReceive(); afterReceive(); }
 }
@@ -848,6 +858,7 @@ function viewEntry(){
     <div class="muted">${a ? `<span class="tag ${ATT[a].cls}">${ATT[a].n}</span> ` : ''}${ro && on('roles') ? `<span class="tag role">${esc(ro.n)}</span> ${esc(ro.d || '')}` : ''}${S.rt === n ? ' <span class="tag rt">🔁 Rattrapage</span>' : ''}</div></div>
     <span id="saved-flag" class="saved"></span></div>`;
   if (FRS.length && !SEANCE) h += frStrip(sid);
+  h += vidCard(n, sid);
   FIELDS.forEach(f => {
     if ((!f.show && !isProf()) || !shownF(f)) return;
     const t = tgtOf(sid, f), pv = prev ? lessonVal(prev, sid, f) : null, Lv = C.L[f.id];
@@ -902,24 +913,93 @@ function bindEntry(){
    Espace enseignant
    ===================================================================== */
 const PTABS = {
-  classe:{ n:'Classe & élèves', ico:'👥' }, groupes:{ n:'Groupes', ico:'🎨' }, lecons:{ n:SEANCE ? 'Séance' : 'Paramètres du cycle', ico:'📅' }, appel:{ n:'Appel', ico:'✅' },
-  ...(TFIELDS.length ? { cibles:{ n:'Cibles', ico:'🎯' } } : {}), ...(CFG.roles.length ? { roles:{ n:'Rôles', ico:'🎭' } } : {}),
-  qr:{ n:'QR de la ' + LECON, ico:'📲' }, saisie:{ n:'Saisie directe', ico:'✍️' }, ...(Object.keys(TOOLS_ON).length ? { outils:{ n:'Outils', ico:'🧰' } } : {}),
-  recup:{ n:'Récupérer les saisies', ico:'📥' },
-  bilanL:{ n:'Bilan ' + (SEANCE ? 'de la séance' : 'par leçon'), ico:'🔎' }, resultats:{ n:'Résultats', ico:'📊' }, classement:{ n:'Classement', ico:'🏆' },
+  classe:{ n:'Classe & élèves', ico:'👥' }, groupes:{ n:'Groupes', ico:'🎨' }, lecons:{ n:SEANCE ? 'Réglages de la séance' : 'Paramètres du cycle', ico:'📅' },
+  ...(TFIELDS.length ? { cibles:{ n:'Cibles', ico:'🎯' } } : {}),
+  hub:{ n:'Outils de la ' + LECON, ico:'🧰' }, lecon:{ n:'Réglages de la ' + LECON, ico:'✏️' }, appel:{ n:'Appel', ico:'✅' }, ...(CFG.roles.length ? { roles:{ n:'Rôles', ico:'🎭' } } : {}),
+  qr:{ n:'QR de la ' + LECON, ico:'📲' }, saisie:{ n:'Saisie (dépannage)', ico:'✍️' }, ...(Object.keys(TOOLS_ON).length ? { outils:{ n:'Outils de séance', ico:'⏱' } } : {}),
+  recup:{ n:'Récupérer les saisies', ico:'📥' }, fin:{ n:'Bilan de la ' + LECON, ico:'🏁' },
+  resultats:{ n:'Résultats', ico:'📊' }, bilanL:{ n:'Bilan ' + (SEANCE ? 'de la séance' : 'par leçon'), ico:'🔎' }, classement:{ n:'Classement', ico:'🏆' },
   ...(CFG.filsRouges.some(fr => fr.actif) ? { filrouge:{ n:'Fils rouges', ico:'🧶' } } : {}),
   ...(CFG.grade.on && CFG.grade.items.length ? { notes:{ n:'Notes', ico:'📝' } } : {}), export:{ n:'Export & sauvegarde', ico:'💾' } };
-const PSECT = [ ['Préparer', ['classe','groupes','lecons','appel','cibles','roles']], ['Pendant la ' + LECON, ['qr','saisie','outils']], ['Récupérer', ['recup']], ['Bilans', ['bilanL','resultats','classement','filrouge','notes','export']] ];
+/* v1.5 : navigation reprise de Musculation 1.9 — 3 entrées : Préparer · Mes leçons (une tuile par leçon → outils de la leçon) · Suivi et bilans */
+const PSECT = {
+  prep:   { ico:'🛠', t:SEANCE ? 'Préparer la séance' : 'Préparer le cycle', sub:'Élèves · groupes · ' + (SEANCE ? 'réglages' : 'leçons et réglages') + ' · cibles', tabs:['classe','groupes','lecons','cibles'] },
+  jour:   { ico:'🧰', t:SEANCE ? 'Ma séance' : 'Ma leçon', tabs:['hub','lecon','appel','roles','qr','saisie','outils','recup','fin'] },
+  bilans: { ico:'📊', t:'Suivi et bilans', get sub(){ return 'Résultats · bilans · classement' + (FRS.length ? ' · fils rouges' : '') + (PTABS.notes ? ' · notes' : '') + ' · export & sauvegarde'; }, tabs:['resultats','bilanL','classement','filrouge','notes','export'] } };
+const tabOK = k => !!PTABS[k] && (k !== 'filrouge' || FRS.length) && (k !== 'cibles' || on('cibles')) && (k !== 'roles' || on('roles'));
+const tabName = k => k === 'filrouge' ? frTabName() : PTABS[k].n;
+function sectOf(tab){ return Object.keys(PSECT).find(k => PSECT[k].tabs.includes(tab)) || (tab === 'frDetail' ? 'bilans' : null); }
+/* état d'une leçon : 📝 à préparer · ▶️ en cours (appel, QR ou saisies) · ✅ terminée (marquée dans le bilan de la leçon ; rien n'est figé) */
+function lessonStatus(n){ const L = lesson(n);
+  if (L.done) return { k:'done', t:'✅ Terminée le ' + new Date(L.done).toLocaleDateString('fr-FR') };
+  return (L.started || S.students.some(s => res(n, s.id))) ? { k:'run', t:'▶️ En cours' } : { k:'todo', t:'📝 À préparer' }; }
+const lessonsDone = () => Array.from({ length:S.settings.nbLessons }, (_, i) => i + 1).filter(n => lesson(n).done).length;
+const gotCount = n => S.students.filter(s => res(n, s.id)).length, presCount = n => S.students.filter(s => !isOff(attOf(n, s.id))).length;
+function lessonTile(n){
+  const L = lesson(n), st = lessonStatus(n), cur = n === curLesson();
+  return `<button class="ltile ${st.k} ${cur ? 'cur' : ''}" data-action="openLesson" data-n="${n}"><span class="lt-num">${n}</span>
+    <span class="lt-main"><b>${L.title ? esc(L.title) : 'Leçon ' + n}${L.ev ? ' 📝' : ''}</b><small>${st.k === 'done' ? '✅ terminée' : st.k === 'run' ? '▶️ en cours · ' + gotCount(n) + ' fiche(s)' : '📝 à préparer'}${cur ? ' · 📍' : ''}</small></span>
+    ${st.k === 'done' ? '<span class="lt-ok">✓</span>' : ''}</button>`;
+}
+function bigSect(sec){ const P = PSECT[sec]; return `<button class="sect-btn" data-action="tab" data-tab="${P.tabs.find(tabOK)}"><span class="ico">${P.ico}</span><span><b>${P.t}</b><small>${P.sub}</small></span><span class="go">›</span></button>`; }
 function viewProf(){
-  const t = UI.profTab;
-  if (t === 'menu') return profMenu();
-  const fn = { groupes:profGroupes, bilanL:profBilanL, filrouge:profFilRouge, frDetail:() => frDetailView(UI.sid), classe:profClasse, lecons:profLecons, appel:profAppel, cibles:profCibles, roles:profRoles, qr:profQR, recup:profRecup, resultats:profResultats, classement:profClassement, notes:profNotes, export:profExport }[t];
-  return fn ? fn() : profMenu();
+  const t = UI.profTab, sec = sectOf(t);
+  if (t === 'menu' || !sec) { UI.profTab = 'menu'; return profMenu(); }
+  const fn = { hub:profHub, lecon:profLecon, fin:profFin, groupes:profGroupes, bilanL:profBilanL, filrouge:profFilRouge, frDetail:() => frDetailView(UI.sid), classe:profClasse, lecons:profLecons, appel:profAppel, cibles:profCibles, roles:profRoles, qr:profQR, recup:profRecup, resultats:profResultats, classement:profClassement, notes:profNotes, export:profExport }[t];
+  return sectHeader(sec) + (fn ? fn() : '');
 }
 function profMenu(){
-  return `${backupReminder()}${lessonBanner()}${PSECT.map(([t, L], i) => { const tabs = L.filter(k => PTABS[k] && (k !== 'filrouge' || FRS.length) && (k !== 'cibles' || on('cibles')) && (k !== 'roles' || on('roles'))); if (!tabs.length) return '';
-      return `<div class="p-sect"><h3><span class="p-step">${i + 1}</span>${t}</h3><div class="menu-grid">${tabs.map(k => `<button class="menu-btn ${['qr','recup'].includes(k) ? 'hl' : ''}" data-action="tab" data-tab="${k}"><span class="ico">${PTABS[k].ico}</span>${k === 'filrouge' ? esc(frTabName()) : PTABS[k].n}</button>`).join('')}</div></div>`; }).join('')}
+  const N = S.settings.nbLessons;
+  return `${backupReminder()}<div class="card strong compact center menu-head"><b>🏫 ${esc(className())}</b> · ${S.students.length} élève(s)${SEANCE ? '' : ` · ${lessonsDone()}/${N} leçon(s) terminée(s)`}${classChips()}</div>
+    ${bigSect('prep')}
+    ${SEANCE ? `<button class="sect-btn hl" data-action="openLesson" data-n="1"><span class="ico">🧰</span><span><b>Ma séance</b><small>Appel · QR · saisie · récupérer · bilan — ${lessonStatus(1).t}</small></span><span class="go">›</span></button>`
+      : `<div class="card compact"><h3 class="lt-h">📅 Mes leçons <span class="muted">· touchez la leçon sur laquelle vous allez</span></h3><div class="ltiles">${Array.from({ length:N }, (_, i) => lessonTile(i + 1)).join('')}</div></div>`}
+    ${bigSect('bilans')}
+    <div class="btn-row center-row"><button class="btn small" data-action="demoClass">🧪 Classe de démonstration</button></div>
     ${appQRCard()}`;
+}
+function subTabs(sec){ return `<div class="stabs">${PSECT[sec].tabs.filter(tabOK).map(k => `<button class="stab ${UI.profTab === k || (k === 'filrouge' && UI.profTab === 'frDetail') ? 'on' : ''}" data-action="tab" data-tab="${k}">${PTABS[k].ico} ${esc(tabName(k))}</button>`).join('')}</div>`; }
+function sectHeader(sec){
+  const P = PSECT[sec], back = `<button class="btn small" data-action="tab" data-tab="menu">← Menu enseignant</button>`;
+  if (sec === 'jour') { const n = curLesson(), st = lessonStatus(n);
+    return `<div class="btn-row nav-row">${back}${UI.profTab !== 'hub' ? `<button class="btn small" data-action="tab" data-tab="hub">🧰 Outils de la ${LECON}</button>` : ''}</div>
+      <div class="card strong compact"><div class="btn-row spread"><h2 class="lh-t">🧰 ${SEANCE ? 'Séance' : `Leçon ${n}/${S.settings.nbLessons}`}${lesson(n).title ? ' · ' + esc(lesson(n).title) : ''}${lesson(n).ev ? ' · 📝 évaluation' : ''}</h2><span class="st st-${st.k}">${st.t}</span></div>
+        ${SEANCE ? '' : `<div class="lpick">${Array.from({ length:S.settings.nbLessons }, (_, i) => i + 1).map(l => `<button class="lp ${l === n ? 'on' : ''} ${lesson(l).done ? 'dn' : ''}" data-action="openLesson" data-n="${l}">${l}<small>${lesson(l).done ? '✅' : lesson(l).ev ? '📝' : ''}</small></button>`).join('')}</div>`}</div>
+      ${UI.profTab !== 'hub' ? subTabs(sec) : ''}`; }
+  return `<div class="btn-row nav-row">${back}</div><div class="card strong compact"><h2 class="lh-t">${P.ico} ${P.t}</h2></div>${subTabs(sec)}`;
+}
+/* 🧰 les outils de la leçon choisie, dans l'ordre du déroulement */
+function profHub(){
+  const n = curLesson(), L = lesson(n), pres = presCount(n), off = S.students.length - pres, got = gotCount(n);
+  const tool = (tab, ico, t, sub, cls = '') => tabOK(tab) ? `<button class="hub-btn ${cls}" data-action="tab" data-tab="${tab}"><span class="ico">${ico}</span><b>${t}</b><small>${sub}</small></button>` : '';
+  return `<div class="hub">
+    ${tool('lecon', '✏️', 'Réglages de la ' + LECON, `${L.title ? esc(L.title) + ' · ' : ''}${INPUTS.some(f => f.per === 'try') ? tries(n) + ' essai(s)' : ''}${L.ev ? ' · 📝 évaluation' : ''}`)}
+    ${tool('appel', '✅', 'Faire l\'appel', Object.keys(L.att).length || L.started ? `${pres} présent(s) · ${off} absent(s)/dispensé(s)` : 'à faire avant les QR codes')}
+    ${tool('roles', '🎭', 'Rôles du jour', CFG.rotate ? 'rotation automatique dans les groupes' : 'à attribuer')}
+    ${tool('qr', '📲', 'Envoyer la ' + LECON, 'QR à scanner sur les tablettes élèves', 'hl')}
+    ${tool('saisie', '✍️', 'Saisie (dépannage)', 'saisir pour un élève sur cette tablette')}
+    ${tool('outils', '⏱', 'Outils de séance', Object.keys(TOOLS_ON).map(k => TOOL_DEFS[k] ? TOOL_DEFS[k].n.toLowerCase() : '').filter(Boolean).slice(0, 4).join(' · '))}
+    ${tool('recup', '📥', 'Récupérer les saisies', `${got}/${pres} fiche(s) reçue(s) · scanner les tablettes`, 'hl')}
+    ${tool('fin', '🏁', 'Bilan de la ' + LECON, L.done ? '✅ terminée le ' + new Date(L.done).toLocaleDateString('fr-FR') : 'qui progresse, qui décroche · terminer la ' + LECON, L.done ? 'okb' : '')}</div>`;
+}
+const flowNext = (tab, lab) => tabOK(tab) ? `<div class="flow-next"><button class="btn primary big-next" data-action="tab" data-tab="${tab}">${lab} →</button></div>` : '';
+function profLecon(){
+  const n = curLesson(), L = lesson(n);
+  return `<div class="card"><h3>${SEANCE ? 'La séance' : 'Leçon ' + n}</h3>
+      <div class="form-row"><span>Titre / thème</span><button class="btn small" data-action="lessonTitle">${esc(L.title || '—')} ✎</button></div>
+      ${INPUTS.some(f => f.per === 'try') ? `<div class="form-row"><span>Nombre d'essais par élève</span>${stepper('tries', L.tries)}</div>` : ''}
+      ${SEANCE ? '' : `<div class="form-row"><span>Leçon d'évaluation (comptée dans les notes)</span><button class="btn small ${L.ev ? 'green' : ''}" data-action="toggleEv">${L.ev ? '✓ Oui' : 'Non'}</button></div>`}</div>
+    <p class="muted center">Réglages valables pour toute la classe (paramètres de l'activité, fonctions affichées, fils rouges) : Menu → ${PSECT.prep.ico} ${PSECT.prep.t}.</p>` + flowNext('appel', '✅ Suivant : faire l\'appel');
+}
+function profFin(){
+  const n = curLesson(), L = lesson(n), nx = n < S.settings.nbLessons && !SEANCE ? n + 1 : 0;
+  UI.bilN = n;
+  return `<div class="card fin-card"><div id="wait-box">${waitList()}</div>
+      <div class="btn-row" style="margin-top:10px">${L.done ? `<span class="st st-done">✅ ${SEANCE ? 'Séance terminée' : 'Leçon terminée'}</span><button class="btn small ghost" data-action="endLesson">↺ Remettre en cours</button>`
+        : `<button class="btn green" data-action="endLesson">🏁 Marquer la ${LECON} terminée</button>`}
+      <button class="btn small" data-action="tab" data-tab="recup">📥 Scanner d'autres tablettes</button></div>
+      <p class="muted small">« Terminée » sert de repère dans Mes leçons (✅). Les saisies restent modifiables et les QR des retardataires sont toujours acceptés.</p></div>
+    ${profBilanL()}${nx ? `<div class="flow-next"><button class="btn primary big-next" data-action="openLesson" data-tab="hub" data-n="${nx}">▶ Préparer la leçon ${nx} →</button></div>` : ''}`;
 }
 function classChips(){
   return `<div class="filters"><b>Classe :</b>${Object.values(ROOT.classes).map(c => `<button class="chip ${c.id === S.id ? 'on' : ''}" data-action="useClass" data-c="${c.id}">${esc(className(c))}</button>`).join('')}
@@ -947,7 +1027,7 @@ function profLecons(){
     <div class="card"><h3>🔄 Nouvelle séance</h3><p class="muted">Pour rejouer la séance avec cette classe : les saisies, l'appel et les remarques sont effacés (pensez à l'export Excel avant). Les élèves, groupes et cibles sont gardés.</p>
       <div class="btn-row"><button class="btn" data-action="excel">📊 Export Excel d'abord</button><button class="btn red" data-action="newSeance">🔄 Nouvelle séance</button></div></div>` + paramsCard() + displayCard() + frChoiceCard() + newCycleCard();
   return `<div class="card"><div class="btn-row spread"><h3 style="margin:0">Nombre de leçons du cycle</h3>${stepper('nbLessons', S.settings.nbLessons)}</div></div>
-    <div class="card"><h3>Leçon en cours</h3><div class="lchips">${Array.from({ length:S.settings.nbLessons }, (_, i) => i + 1).map(l => `<button class="chip ${l === n ? 'on' : ''} ${lesson(l).ev ? 'ev' : ''}" data-action="setLesson" data-n="${l}">${l}${lesson(l).ev ? ' 📝' : ''}</button>`).join('')}</div></div>
+    <div class="card"><h3>Régler une leçon <span class="muted">· le jour J, passez plutôt par Mes leçons</span></h3><div class="lchips">${Array.from({ length:S.settings.nbLessons }, (_, i) => i + 1).map(l => `<button class="chip ${l === n ? 'on' : ''} ${lesson(l).ev ? 'ev' : ''}" data-action="setLesson" data-n="${l}">${l}${lesson(l).ev ? ' 📝' : ''}</button>`).join('')}</div></div>
     <div class="card"><h3>Leçon ${n}</h3>
       <div class="form-row"><span>Titre / thème</span><button class="btn small" data-action="lessonTitle">${esc(L.title || '—')} ✎</button></div>
       ${INPUTS.some(f => f.per === 'try') ? `<div class="form-row"><span>Nombre d'essais par élève</span>${stepper('tries', L.tries)}</div>` : ''}
@@ -960,7 +1040,7 @@ function profAppel(){
     <div class="att-sum"><span class="tag ok">✓ ${cnt(0)} présent(s)</span>${[1,2,3,4].map(k => cnt(k) ? `<span class="tag ${ATT[k].cls}">${ATT[k].ico} ${cnt(k)} ${ATT[k].n.toLowerCase()}</span>` : '').join('')}</div>
     <p class="muted small">« Inapte partiel » et « sans tenue » : l'élève reste dans les saisies (exercice adapté, rôle d'observateur…).</p></div>${groupChips(UI.appelG ?? null, 'appelGrp')}
     <div class="tiles">${list.filter(s => UI.appelG == null || (s.grp || 0) === UI.appelG).map(s => { const a = attOf(n, s.id);
-      return `<button class="tile att ${a ? ATT[a].cls : 'ok'}" data-action="pickAtt" data-sid="${s.id}">${band(s.id)}<span class="name">${esc(nameOf(s.id))}</span><span class="meta">${a ? ATT[a].ico + ' ' + ATT[a].n : '✓ Présent'}</span></button>`; }).join('')}</div>`;
+      return `<button class="tile att ${a ? ATT[a].cls : 'ok'}" data-action="pickAtt" data-sid="${s.id}">${band(s.id)}<span class="name">${esc(nameOf(s.id))}</span><span class="meta">${a ? ATT[a].ico + ' ' + ATT[a].n : '✓ Présent'}</span></button>`; }).join('')}</div>` + flowNext(tabOK('roles') ? 'roles' : 'qr', tabOK('roles') ? '🎭 Suivant : les rôles' : '📲 Suivant : envoyer la ' + LECON);
 }
 function profCibles(){
   const ls = Array.from({ length:S.settings.nbLessons }, (_, i) => i + 1), from = UI.ciblesL || Math.max(1, curLesson() - 1);
@@ -982,12 +1062,12 @@ function profRoles(){
     ${Array.from({ length:nbGroups() }, (_, g) => { const mates = sortedStudents().filter(s => (s.grp || 0) === g); if (!mates.length) return '';
       return `<div class="card">${nbGroups() > 1 ? `<h3><span class="dot" style="background:${groupColor(g).c}"></span> Groupe ${groupColor(g).n}</h3>` : ''}<div class="tiles">
         ${mates.map(s => { const i = roleIdx(n, s.id), a = attOf(n, s.id); return `<button class="tile ${a ? 'off' : ''}" data-action="cycleRole" data-sid="${s.id}">${band(s.id)}<span class="name">${esc(nameOf(s.id))}</span>
-          ${a ? `<span class="tag ${ATT[a].cls}">${ATT[a].n}</span>` : i != null ? `<span class="tag role r${i % 6}">${esc(CFG.roles[i].n)}</span>` : ''}</button>`; }).join('')}</div></div>`; }).join('')}`;
+          ${a ? `<span class="tag ${ATT[a].cls}">${ATT[a].n}</span>` : i != null ? `<span class="tag role r${i % 6}">${esc(CFG.roles[i].n)}</span>` : ''}</button>`; }).join('')}</div></div>`; }).join('')}` + flowNext('qr', '📲 Suivant : envoyer la ' + LECON);
 }
 function profQR(){
   return `<div class="card center"><b>Sur chaque tablette élève : Accueil → 📷 Recevoir la leçon.</b><br><span class="muted">Écran à 30–40 cm, luminosité au maximum. Les QR défilent seuls ; touchez un numéro manquant pour l'afficher.</span></div>
     <div id="qr-seance" class="center">Préparation…</div>
-    <div class="btn-row" style="justify-content:center;margin-top:12px"><button class="btn" data-action="fileSeance">📤 Partager la leçon en fichier (AirDrop…)</button></div>${rattrapCard()}`;
+    <div class="btn-row" style="justify-content:center;margin-top:12px"><button class="btn" data-action="fileSeance">📤 Partager la leçon en fichier (AirDrop…)</button></div>${rattrapCard()}` + flowNext('recup', '📥 Fin de ' + LECON + ' : récupérer les saisies');
 }
 function waitList(){
   const n = curLesson(), got = S.students.filter(s => res(n, s.id)), miss = S.students.filter(s => !res(n, s.id) && !attOf(n, s.id));
@@ -996,7 +1076,7 @@ function waitList(){
 function profRecup(){
   return `<div class="card center"><b>Sur chaque tablette élève : 📤 Envoyer mes saisies, puis scannez ici.</b><br><span class="muted">La caméra reste allumée : enchaînez les tablettes.</span></div>
     <div class="card" id="wait-box">${waitList()}</div><div id="scan-area"></div>
-    <div class="btn-row" style="justify-content:center;margin-top:12px"><label class="btn">📂 Importer un fichier (.json)<input type="file" id="file-sync" accept=".json,application/json" hidden></label></div>`;
+    <div class="btn-row" style="justify-content:center;margin-top:12px"><label class="btn">📂 Importer un fichier (.json)<input type="file" id="file-sync" accept=".json,application/json" hidden></label></div>` + flowNext('fin', '🏁 Suivant : bilan de la ' + LECON);
 }
 function profResultats(){
   const n = UI.resL || curLesson(), ls = Array.from({ length:S.settings.nbLessons }, (_, i) => i + 1), shown = FIELDS;
@@ -1225,7 +1305,7 @@ function profBilanL(){
     return `<div class="card bl-col ${cls}"><h3>${t} <span class="muted">· ${l.length}</span></h3><div class="muted bl-hint">${hint}</div>
       ${l.map(x => `<div class="bl-it" data-action="stuDetail" data-sid="${x.s.id}">${band(x.s.id)}<b>${esc(nameOf(x.s.id))}</b><span>${x.o[k].map(esc).join(' · ')}</span></div>`).join('') || '<div class="muted">Personne</div>'}</div>`; };
   return `<div class="card strong"><h3>🔎 Bilan de ${SEANCE ? 'la séance' : 'la leçon ' + n}</h3>
-      ${SEANCE ? '' : `<div class="lchips">${Array.from({ length:S.settings.nbLessons }, (_, i) => i + 1).map(k => `<button class="chip ${k === n ? 'on' : ''}" data-action="bilN" data-n="${k}">${k}</button>`).join('')}</div>`}
+      ${SEANCE || UI.profTab === 'fin' ? '' : `<div class="lchips">${Array.from({ length:S.settings.nbLessons }, (_, i) => i + 1).map(k => `<button class="chip ${k === n ? 'on' : ''}" data-action="bilN" data-n="${k}">${k}</button>`).join('')}</div>`}
       <div class="muted">${esc(lesson(n).title || '')}${off.length ? ` · ${off.length} absent(s)/dispensé(s) : ${off.map(x => esc(nameOf(x.s.id))).join(', ')}` : ''}</div>
       ${CRIT_F.some(f => critStats(n, f)?.nb) ? `<button class="btn orange" data-action="proj" data-n="${n}" style="margin-top:8px">📺 Montrer le bilan à la classe</button>` : ''}</div>
     ${bilanCard(n)}${classCrit(n)}
@@ -1454,7 +1534,7 @@ function paramsCard(){
 const HIDEABLE = () => [
   CRIT_F.length && ['piliers', '👀 Piliers et critères observés'], TFIELDS.length && ['cibles', '🎯 Cibles des élèves'], CFG.roles.length && ['roles', '🎭 Rôles'],
   Object.keys(TOOLS_ON).length && ['outils', '🧰 Outils sur les tablettes élèves'], !SEANCE && ['graphes', '📊 Graphiques de progression des élèves'],
-  CFG.evalObs && ['obs', '👀 Évaluation de l\'observateur par le pratiquant'] ].filter(Boolean);
+  CFG.evalObs && ['obs', '👀 Évaluation de l\'observateur par le pratiquant'], CFG.video && ['video', '🎥 Vidéo différée des passages'] ].filter(Boolean);
 function displayCard(){
   const L = HIDEABLE(); if (!L.length) return '';
   return `<div class="card"><h3>👁 Fonctions affichées</h3><p class="muted">Masquez ce qui ne sert pas cette année (rien n'est effacé). Envoyé aux tablettes avec le QR de la ${LECON}.</p>
@@ -1510,6 +1590,105 @@ function backupReminder(){
 }
 
 /* =====================================================================
+   VIDÉO DIFFÉRÉE D'UN PASSAGE (reprise de RelaisZ) : la tablette filme le passage de l'élève,
+   le rejoue automatiquement après quelques secondes, critères observés incrustés et cochables
+   sur la vidéo. La vidéo reste en mémoire le temps de l'observation : jamais enregistrée ni envoyée.
+   ===================================================================== */
+const VIDEO = CFG.video;
+const vidOK = () => !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
+const VD = { stream:null, rec:null, chunks:[], mime:'', url:null, state:'off', sid:null, t0:0, timer:null, hideOv:false };
+const vDelay = () => ROOT.vdelay || VIDEO.delai;
+function vidCard(n, sid){
+  if (!VIDEO || !on('video')) return '';
+  return `<div class="card vid-card"><div><b>🎥 Vidéo différée</b><div class="muted small">La tablette filme le passage puis le rejoue ${vDelay()} s après la fin, critères affichés sur la vidéo. Rien n'est enregistré ni envoyé.</div></div>
+    <button class="btn orange" data-action="vidOpen">🎥 Filmer le passage</button></div>`;
+}
+const vidRoot = () => { let r = document.getElementById('vid-root'); if (!r) { r = document.createElement('div'); r.id = 'vid-root'; document.body.appendChild(r); } return r; };
+/* essai observé : le premier essai dont les critères ne sont pas tous renseignés */
+function vidTry(n, sid, f){ if (f.per !== 'try') return null; const k = tries(n); for (let j = 0; j < k; j++) if (!critFull(rawVal(n, sid, f, j))) return j; return k - 1; }
+function vidOverlay(){
+  const n = curLesson(), sid = VD.sid, F = CRIT_F.filter(shownF);
+  if (!F.length || VD.hideOv) return '';
+  return F.map(f => { const k = vidTry(n, sid, f), v = rawVal(n, sid, f, k) || [];
+    return `<div class="vd-f"><b>${esc(f.label)}${k != null ? ` · essai ${k + 1}` : ''}</b>${f.criteres.map((c, i) => `<div class="vd-c"><span>${esc(c)}</span>
+      <button class="cr-b ok ${v[i] === 1 ? 'on' : ''}" data-vc="${f.id}" data-k="${k ?? ''}" data-i="${i}" data-x="1">✓</button><button class="cr-b ko ${v[i] === 0 ? 'on' : ''}" data-vc="${f.id}" data-k="${k ?? ''}" data-i="${i}" data-x="0">✗</button></div>`).join('')}</div>`; }).join('');
+}
+function vidPaint(){
+  const R = vidRoot(), st = VD.state;
+  if (st === 'off') { R.innerHTML = ''; return; }
+  const head = `<div class="vd-head"><b>🎥 ${esc(nameOf(VD.sid))}</b><label class="vd-dl">relecture après <select id="vd-delay">${[2, 3, 5, 8, 10, 15].map(s => `<option value="${s}" ${vDelay() === s ? 'selected' : ''}>${s} s</option>`).join('')}</select></label>
+    <button class="btn small" data-vd="close">✓ Terminer</button></div>`;
+  let body = '';
+  if (st === 'ready' || st === 'rec') body = `<div class="vd-stage"><video id="vd-live" playsinline webkit-playsinline muted autoplay></video>${st === 'rec' ? '<div class="vd-recdot">● REC <span id="vd-time">0,0 s</span></div>' : ''}</div>
+    <div class="btn-row center-row">${st === 'ready' ? '<button class="btn red big" data-vd="rec">● Filmer</button>' : '<button class="btn big" data-vd="stop">■ Fin du passage</button>'}</div>`;
+  else if (st === 'prep') body = '<div class="vd-stage wait"><div class="vd-count">Préparation de la vidéo…</div></div>';
+  else body = `<div class="vd-stage ${VD.hideOv ? 'no-ov' : ''}"><video id="vd-vid" playsinline webkit-playsinline muted preload="auto" src="${VD.url}"></video><div class="vd-count" id="vd-count"></div>
+      <div class="vd-ov" id="vd-ov">${vidOverlay()}</div></div>
+    <div class="btn-row center-row vd-ctl"><button class="btn" data-vd="again">↺ Revoir</button><button class="btn" data-vd="slow">🐢 Ralenti</button><button class="btn" data-vd="pause">⏯ Pause</button>
+      ${CRIT_F.some(shownF) ? `<button class="btn" data-vd="ov">👁 Critères</button>` : ''}<button class="btn orange" data-vd="new">● Nouveau passage</button></div>`;
+  R.innerHTML = `<div class="vd-panel">${head}${body}</div>`;
+  R.querySelector('#vd-delay').onchange = e => { ROOT.vdelay = +e.target.value; save(); };
+  R.querySelectorAll('[data-vd]').forEach(b => b.onclick = () => vidAct(b.dataset.vd));
+  const live = R.querySelector('#vd-live'); if (live && VD.stream) { live.srcObject = VD.stream; live.play().catch(() => {}); }
+  if (st === 'count') vidReplay(true);
+  bindOverlay();
+}
+function bindOverlay(){
+  vidRoot().querySelectorAll('[data-vc]').forEach(b => b.onclick = () => {
+    const f = fieldById(b.dataset.vc), k = b.dataset.k === '' ? null : +b.dataset.k, n = curLesson(), arr = [...(rawVal(n, VD.sid, f, k) || [])];
+    while (arr.length < f.criteres.length) arr.push(null); const i = +b.dataset.i, x = +b.dataset.x; arr[i] = arr[i] === x ? null : x;
+    setVal(n, VD.sid, f, k, arr); const ov = document.getElementById('vd-ov'); if (ov) { ov.innerHTML = vidOverlay(); bindOverlay(); } });
+}
+async function vidCamera(){
+  try { if (!VD.stream) VD.stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ ideal:'environment' }, width:{ ideal:1280 }, height:{ ideal:720 } }, audio:false });
+    const live = document.getElementById('vd-live'); if (live) { live.srcObject = VD.stream; live.play().catch(() => {}); } return true; }
+  catch(e){ toast('⚠️ Caméra refusée ou indisponible', 3500); vidClose(); return false; }
+}
+function vidDiscard(){ clearInterval(VD.timer); if (VD.rec && VD.rec.state !== 'inactive') { VD.rec.ondataavailable = null; VD.rec.onstop = null; try { VD.rec.stop(); } catch(e){} }
+  VD.rec = null; VD.chunks = []; if (VD.url) URL.revokeObjectURL(VD.url); VD.url = null; }
+async function vidOpen(){
+  if (!vidOK()) return toast('Vidéo indisponible sur cet appareil (navigateur trop ancien)', 3500);
+  VD.sid = UI.sid; VD.state = 'ready'; VD.hideOv = false; vidPaint(); if (typeof keepAwake === 'function') keepAwake(true); await vidCamera();
+}
+function vidClose(){ vidDiscard(); if (VD.stream) VD.stream.getTracks().forEach(t => t.stop()); VD.stream = null; VD.state = 'off'; vidPaint(); if (typeof keepAwake === 'function') keepAwake(false); if (UI.view === 'entry') rerender(); }
+async function vidAct(a){
+  if (a === 'close') return vidClose();
+  if (a === 'rec' || a === 'new') {
+    vidDiscard(); if (a === 'new') { VD.state = 'ready'; vidPaint(); if (!(await vidCamera())) return; }
+    const mime = ['video/mp4', 'video/webm;codecs=vp9', 'video/webm'].find(m => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) || '';
+    try { VD.rec = new MediaRecorder(VD.stream, mime ? { mimeType: mime } : undefined); } catch(e){ return toast('Enregistrement impossible sur cet appareil'); }
+    VD.chunks = []; VD.mime = VD.rec.mimeType || mime || 'video/mp4';
+    VD.rec.ondataavailable = e => { if (e.data && e.data.size) VD.chunks.push(e.data); };
+    VD.rec.start(250); VD.t0 = performance.now(); VD.state = 'rec'; vidPaint();
+    VD.timer = setInterval(() => { const el = document.getElementById('vd-time'); if (el) el.textContent = fmtN((performance.now() - VD.t0) / 1000, 1) + ' s'; }, 200);
+    if (navigator.vibrate) navigator.vibrate(40); return;
+  }
+  if (a === 'stop') { clearInterval(VD.timer); const rec = VD.rec; VD.state = 'prep'; vidPaint();
+    setTimeout(() => { if (!rec) return; rec.onstop = () => { VD.url = URL.createObjectURL(new Blob(VD.chunks, { type: VD.mime })); VD.rec = null; VD.state = 'count'; vidPaint(); };
+      try { rec.stop(); } catch(e){} }, 700);   // on garde un peu après la fin du passage
+    return;
+  }
+  const v = document.getElementById('vd-vid'); if (!v) return;
+  clearInterval(VD.timer); const c = document.getElementById('vd-count'); if (c) c.textContent = '';
+  if (a === 'again') vidPlay(v, 1); else if (a === 'slow') vidPlay(v, VIDEO.ralenti);
+  else if (a === 'pause') v.paused ? v.play().catch(() => {}) : v.pause();
+  else if (a === 'ov') { VD.hideOv = !VD.hideOv; const s = v.closest('.vd-stage'); s.classList.toggle('no-ov', VD.hideOv); const ov = document.getElementById('vd-ov'); ov.innerHTML = vidOverlay(); bindOverlay(); }
+}
+function vidReady(v, fn){   // vidéo webm (Chrome / Android) : durée inconnue tant qu'on n'a pas sauté à la fin
+  if (v._ready) return fn(); (v._q = v._q || []).push(fn); if (v._wait) return; v._wait = true;
+  const done = () => { v._ready = true; v._q.forEach(f => f()); v._q = []; };
+  const go = () => { if (v.duration === Infinity || isNaN(v.duration)) { v.ondurationchange = () => { if (v.duration !== Infinity && !isNaN(v.duration)) { v.ondurationchange = null; v.currentTime = 0; done(); } }; v.currentTime = 1e6; } else done(); };
+  if (v.readyState >= 1) go(); else v.onloadedmetadata = go;
+}
+const vidPlay = (v, rate) => vidReady(v, () => { v.currentTime = 0; v.playbackRate = rate; v.play().catch(() => {}); });
+function vidReplay(){
+  const v = document.getElementById('vd-vid'); if (!v) return; let n = vDelay(); const c = document.getElementById('vd-count');
+  vidReady(v, () => {}); if (c) c.textContent = `Relecture dans ${n} s`;
+  VD.timer = setInterval(() => { n--; const el = document.getElementById('vd-count'); if (n > 0) { if (el) el.textContent = `Relecture dans ${n} s`; return; }
+    clearInterval(VD.timer); if (el) el.textContent = ''; VD.state = 'play'; vidPlay(v, 1); }, 1000);
+}
+
+/* =====================================================================
    Échanges entre tablettes (QR codes ou fichiers)
    S = leçon (prof → tablettes) · R = saisies (tablette → prof)
    ===================================================================== */
@@ -1559,17 +1738,40 @@ function applySeance(p){
   go('home');
   return 'done';
 }
+/* Saisies envoyées : la leçon en cours + toute fiche d'une autre leçon modifiée depuis son dernier envoi
+   (ex. la tablette a reçu la leçon suivante avant d'avoir envoyé la précédente). Fiches de toutes les tablettes
+   passées par cet appareil, pas seulement celles créées ici. */
 function buildMine(all){
   const R = {}; let count = 0; const cur = curLesson();
-  Object.entries(S.results).forEach(([n, byS]) => { if (!all && +n !== cur) return;
-    Object.entries(byS).forEach(([sid, r]) => { if (r.d === ROOT.deviceId) { (R[n] = R[n] || {})[sid] = r; count++; } }); });
+  Object.entries(S.results).forEach(([n, byS]) => Object.entries(byS).forEach(([sid, r]) => {
+    if (all || +n === cur || !r.s) { (R[n] = R[n] || {})[sid] = r; count++; } }));
   return { pkt:{ k:'res', a:CFG.id, an:CFG.name, cid:S.id, from:ROOT.deviceId, at:now(), R }, count };
+}
+/* cases d'une fiche → { clé : { v, t } } (t = heure absolue ; anciennes fiches : heure de la fiche) */
+function cellsOf(r){
+  const out = {}, V = r.v || {}, T = r.t || {}, base = r.b || 0, abs = (rel, v) => rel != null && base ? base + (rel - 1) * 100 : (v == null ? 0 : (r.ts || 0));
+  Object.keys(V).forEach(key => { const f = fieldById(key), x = V[key];
+    if (f && f.per === 'try' && Array.isArray(x)) x.forEach((v, k) => { out[key + '#' + k] = { v, t: abs(Array.isArray(T[key]) ? T[key][k] : null, v) }; });
+    else out[key] = { v: x, t: abs(Array.isArray(T[key]) ? null : T[key], x) }; });
+  return out;
+}
+function recordOf(cells, extra){
+  const ts = Object.values(cells).map(c => c.t).filter(t => t > 0), b = ts.length ? Math.min(...ts) : now(), r = { ...extra, v:{}, t:{}, b };
+  Object.entries(cells).forEach(([key, c]) => { const rel = c.t > 0 ? Math.round((c.t - b) / 100) + 1 : null, m = key.match(/^(.*)#(\d+)$/);
+    if (m && fieldById(m[1])) { const a = r.v[m[1]] = r.v[m[1]] || [], t = r.t[m[1]] = r.t[m[1]] || []; a[+m[2]] = c.v; t[+m[2]] = rel; }
+    else { r.v[key] = c.v; r.t[key] = rel; } });
+  Object.keys(r.v).forEach(k => { if (Array.isArray(r.v[k]) && fieldById(k)?.per === 'try') { for (let i = 0; i < r.v[k].length; i++) if (r.v[k][i] === undefined) r.v[k][i] = null; } });
+  return r;
 }
 function mergeRes(R){
   let n = 0;
   Object.entries(R || {}).forEach(([l, byS]) => Object.entries(byS || {}).forEach(([sid, r]) => {
     S.results[l] = S.results[l] || {}; const cur = S.results[l][sid];
-    if (!cur || (r.ts || 0) > (cur.ts || 0)) { S.results[l][sid] = r; n++; if (lesson(l).att[sid] === 1) delete lesson(l).att[sid]; } }));   // absent rattrapé
+    if (!cur) { S.results[l][sid] = recordOf(cellsOf(r), { ts: r.ts || now(), d: r.d }); n++; }
+    else { const A = cellsOf(cur), B = cellsOf(r); let ch = false;
+      Object.entries(B).forEach(([key, c]) => { const a = A[key]; if (!a || c.t > a.t) { if (!a || JSON.stringify(a.v) !== JSON.stringify(c.v)) ch = true; A[key] = c; } });   // la case la plus récente gagne
+      if (ch) { S.results[l][sid] = recordOf(A, { ts: Math.max(cur.ts || 0, r.ts || 0), d: cur.d }); n++; } }
+    if (lesson(l).att[sid] === 1 && res(l, sid)) delete lesson(l).att[sid]; }));   // absent rattrapé
   return n;
 }
 async function applyPacket(p){
@@ -1591,7 +1793,8 @@ function viewSend(){
     <div class="btn-row" style="justify-content:center;margin-top:12px"><button class="btn" data-action="fileMine">📤 Partager en fichier (AirDrop…) à la place</button></div>`;
 }
 async function afterSend(){
-  const payload = await encodePacket(buildMine().pkt);
+  const { pkt } = buildMine(); Object.values(S.results).forEach(byS => Object.values(byS).forEach(r => { r.s = 1; })); save();   // marquées envoyées
+  const payload = await encodePacket(pkt);
   const area = $('#qr-area'); if (!area) return;
   showQRSeries(chunkQR(payload, 'R', 300), area, '');
 }
@@ -1730,7 +1933,10 @@ const ACT = {
   swProf: () => { if (isProf() && UI.profUnlocked) return go('prof', { profTab:'menu' }); ACT.unlock(); },
   lock: () => { UI.profUnlocked = false; go('home'); },
   toEleve: async () => { if (await confirmBox('Passer en tablette élève ?', 'Les données de cette tablette sont conservées. Le code enseignant permet de revenir.', 'Passer en élève')) { ROOT.role = 'eleve'; UI.profUnlocked = false; save(); go('home'); } },
-  tab: d => { if (d.tab === 'saisie') return go('saisie'); if (d.tab === 'outils') return go('tools'); go('prof', { profTab:d.tab }); },
+  tab: d => { if (['appel','qr'].includes(d.tab)) { const L = lesson(curLesson()); if (!L.started) { L.started = now(); save(); } }
+    if (d.tab === 'saisie') return go('saisie', { filter:null }); if (d.tab === 'outils') return go('tools'); go('prof', { profTab:d.tab }); },
+  openLesson: d => { S.settings.current = +d.n; save(); const keep = UI.view === 'prof' && sectOf(UI.profTab) === 'jour'; go("prof", { profTab: d.tab || (keep ? UI.profTab : "hub") }); },
+  endLesson: () => { const L = lesson(curLesson()); L.done = L.done ? 0 : now(); save(); rerender(); if (L.done) toast('✅ ' + lessonLabel(curLesson()) + ' terminée'); },
   grp: d => { ROOT.grp = d.g === '' ? null : +d.g; save(); rerender(); },
   appelGrp: d => { UI.appelG = d.g === '' ? null : +d.g; rerender(); },
   entry: d => go('entry', { sid:d.sid }),
@@ -1777,9 +1983,10 @@ const ACT = {
     <div class="btn-row spread"><span></span><button class="btn primary" data-x>Fermer</button></div>`); m.querySelector('[data-x]').onclick = closeModal; },
   agSet: d => { UI.ag[d.k] = ['mix', 'vary'].includes(d.k) ? d.v === '1' : d.v; rerender(); },
   resList: () => resList(),
+  vidOpen: () => vidOpen(),
   pev: d => { S.pev = S.pev || {}; const n = curLesson(), m = S.pev[n] = S.pev[n] || {}, o = m[UI.sid] = m[UI.sid] || {}; o[d.f] = o[d.f] === +d.v ? undefined : +d.v; if (o[d.f] == null) delete o[d.f]; save(); rerender(); },
-  obsBy: d => { setRes(curLesson(), UI.sid, r => { const o = r.v._obs || {}; r.v._obs = o.by === d.by ? {} : { by: d.by }; }); rerender(); },
-  obsLv: d => { setRes(curLesson(), UI.sid, r => { const o = r.v._obs || {}; o.lv = o.lv === +d.v ? null : +d.v; r.v._obs = o; }); rerender(); },
+  obsBy: d => { setRes(curLesson(), UI.sid, r => { const o = r.v._obs || {}; r.v._obs = o.by === d.by ? {} : { by: d.by }; touch(r, '_obs'); }); rerender(); },
+  obsLv: d => { setRes(curLesson(), UI.sid, r => { const o = r.v._obs || {}; o.lv = o.lv === +d.v ? null : +d.v; r.v._obs = o; touch(r, '_obs'); }); rerender(); },
   rtL: d => { UI.rt = { n: +d.n, ids: [] }; rerender(); },
   rtS: d => { const L = UI.rt.ids, i = L.indexOf(d.sid); if (i >= 0) L.splice(i, 1); else L.push(d.sid); rerender(); },
   rtAll: () => { UI.rt.ids = UI.rt.ids.length === S.students.length ? [] : S.students.map(s => s.id); rerender(); },
@@ -1826,7 +2033,7 @@ const ACT = {
   stuDetail: d => stuDetail(d.sid),
   excel: () => exportExcel(),
   backup: () => downloadBackup(),
-  fileMine: () => downloadJSON(buildMine().pkt, `${CFG.short}-saisies-${ROOT.deviceId}.json`),
+  fileMine: () => downloadJSON(buildMine(true).pkt, `${CFG.short}-saisies-${ROOT.deviceId}.json`),
   fileSeance: () => downloadJSON(buildSeance(curLesson()), `${CFG.short}-lecon-${curLesson()}.json`),
   setPin: async () => { const v = await textBox('Nouveau code (4 chiffres)', ''); if (v == null) return; if (!/^\d{4}$/.test(v)) return toast('4 chiffres, s\'il vous plaît'); ROOT.pin = v; save(); toast('✓ Code modifié'); },
   clearLesson: async () => { if (await confirmBox('Effacer les saisies de la leçon ' + curLesson() + ' ?', 'Action définitive pour cette classe.', 'Effacer', true)) { delete S.results[curLesson()]; save(); rerender(); } },

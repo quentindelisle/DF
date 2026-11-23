@@ -1,6 +1,6 @@
 # Demi-fond N'EPS
 
-CA1 · Demi-fond · performance auto-référencée · Quentin Delisle · socle N'EPS 1.3.0 · **v2.6.0**
+CA1 · Demi-fond · performance auto-référencée · Quentin Delisle · socle N'EPS 1.3.0 · **v2.7.0**
 
 ## Fichiers
 
@@ -73,3 +73,10 @@ Nouvelles situations à ajouter dans la Programmation des leçons (le cycle par 
 - **🐺 Gare aux loups** : 6 leçons types, nuits à allure imposée avec signal (sifflet, hurlement ou gong), tirage des rôles et « passe la tablette », défis et missions secrètes, statuts (mordu, guéri, révélé), grille du gardien du temps (contrat tenu = droit de vote), plots par signal, indices, vote à main levée ou secret avec révélation, cartes à imprimer.
 - Voix de la tablette : bouton 🔊 / 🔇 dans les jeux (réglage propre à chaque tablette).
 - Pioche, mains, votes et journal restent sur la tablette qui anime ; les pièces, rôles, statuts et plots relevés de chaque élève remontent avec 📤 / 📥.
+
+## Nouveautés 2.7 (socle N'EPS 1.5)
+
+- **Menu enseignant en trois entrées** : 🛠 Préparer le cycle (classe, groupes, paramètres, 🗺️ programmation des leçons, ⚡ VMA) · 📅 **Mes leçons** (une tuile par leçon : à préparer, en cours avec le nombre de fiches reçues, terminée) · 📊 Suivi et bilans (bilan des exercices, évaluation, piliers, résultats, classement, fils rouges, export).
+- **🧰 Ma leçon** : les outils dans l'ordre du déroulement, avec un bouton « Suivant » : ✏️ Réglages → 🏃 **Programme de la leçon** (les exercices de la leçon et leurs réglages) → ✅ Appel → 🎭 Rôles → 📲 QR → ✍️ Saisie → ⏱ Outils → 📥 Récupérer → 🏁 Bilan de la leçon (avec « 🏃 Bilan des exercices » et « ▶ Préparer la leçon suivante »). Sélecteur de leçon 1…8 en haut, sans quitter l'outil ouvert.
+- « 🏁 Marquer la leçon terminée » : simple repère (✅ dans Mes leçons), rien n'est figé.
+- Le reste du socle 1.5 : envoi des fiches d'une leçon précédente pas encore envoyées, outil 🪞 miroir différé disponible (non activé).

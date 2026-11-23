@@ -12,13 +12,25 @@ PTABS.vma = { n:'VMA des élèves', ico:'⚡' };
 PTABS.pilprof = { n:'Piliers (enseignant)', ico:'🎓' };
 PTABS.bilanDF = { n:'Bilan des exercices', ico:'🏃' };
 PTABS.evalDF = { n:'Évaluation', ico:'📝' };
-PSECT[0][1].splice(PSECT[0][1].indexOf('lecons') + 1, 0, 'plan', 'vma');
-PSECT[3][1].splice(0, 0, 'bilanDF', 'evalDF', 'pilprof');
-/* d'abord ce qui cadre tout le cycle, ensuite ce qui est propre à chaque leçon */
-{ const P = PSECT[0][1].filter(k => k !== 'groupes'), cyc = ['classe', 'lecons', 'vma'].filter(k => P.includes(k)), les = P.filter(k => !cyc.includes(k));
-  PSECT.splice(0, 1, ['Préparer le cycle', cyc], ['Préparer la leçon', les]); }
+PTABS.prog = { n:'Programme de la leçon', ico:'🏃' };
+/* menu enseignant du socle 1.5 : Préparer le cycle · Ma leçon (outils dans l'ordre du déroulement) · Suivi et bilans */
+PSECT.prep.tabs.splice(PSECT.prep.tabs.indexOf('lecons') + 1, 0, 'plan', 'vma');
+PSECT.prep.sub = 'Élèves · groupes · programmation des leçons · VMA · réglages';
+PSECT.jour.tabs.splice(PSECT.jour.tabs.indexOf('lecon') + 1, 0, 'prog');
+PSECT.bilans.tabs.splice(0, 0, 'bilanDF', 'evalDF', 'pilprof');
 const _dfViewProf = viewProf;
-viewProf = () => ({ plan: dfProfPlan, vma: dfProfVma, pilprof: dfProfPil, bilanDF: dfProfBilan, evalDF: dfProfEval }[UI.profTab] || _dfViewProf)();
+viewProf = () => { const f = { plan: dfProfPlan, prog: dfProfPlan, vma: dfProfVma, pilprof: dfProfPil, bilanDF: dfProfBilan, evalDF: dfProfEval }[UI.profTab];
+  return f ? sectHeader(sectOf(UI.profTab)) + f() : _dfViewProf(); };
+/* Ma leçon : Réglages → Programme de la leçon → Appel → … → Bilan (avec le bilan des exercices) */
+const _dfProfLecon = profLecon;
+profLecon = () => _dfProfLecon().replace(flowNext('appel', '✅ Suivant : faire l\'appel'), flowNext('prog', '🏃 Suivant : programme de la leçon'));
+const _dfProfHub = profHub;
+profHub = () => { const n = curLesson(), E = dfExs(n);
+  const h = _dfProfHub(), b = `<button class="hub-btn" data-action="tab" data-tab="prog"><span class="ico">🏃</span><b>Programme de la leçon</b><small>${esc(dfLessonSummary(n))}</small></button>`, k = h.indexOf('</button>');
+  return k < 0 ? h.replace('<div class="hub">', '<div class="hub">' + b) : h.slice(0, k + 9) + b + h.slice(k + 9); };
+const _dfProfFin = profFin;
+profFin = () => _dfProfFin().replace('<button class="btn small" data-action="tab" data-tab="recup">', `<button class="btn small" data-action="dfFinBil">🏃 Bilan des exercices</button><button class="btn small" data-action="tab" data-tab="recup">`);
+Object.assign(ACT, { dfFinBil: () => { UI.bdL = curLesson(); go('prof', { profTab:'bilanDF' }); } });
 
 /* ---------- Paramètres du cycle : le plan remplace le nombre d'essais ---------- */
 profLecons = () => `<div class="card df-help"><b>⚙️ Paramètres du cycle</b> : à régler <b>en amont</b>, ils valent pour toutes les leçons (nombre de leçons, piste, fils suivis, forme des piliers, jokers). Ensuite, chaque leçon se prépare dans <button class="btn small" data-action="tab" data-tab="plan">🗺️ Programmation des leçons</button> : exercices, équipes, pilier observé, leçon en cours.</div>
@@ -129,12 +141,13 @@ function dfJokCard(){
       <button class="btn small ${j.on !== false ? 'green' : ''}" data-action="dfJokOn" data-k="${k}">${j.on !== false ? '✓ Proposé' : 'Masqué'}</button><button class="btn small ghost" data-action="dfJokDel" data-k="${k}">🗑</button></div></div>`).join('')}
     <div class="btn-row"><button class="btn small primary" data-action="dfJokAdd">＋ Nouveau thème</button><button class="btn small ghost" data-action="dfJokReset">↺ Jokers par défaut</button></div></details>`;
 }
-function dfProfPlan(){
-  const n = UI.planL && UI.planL <= S.settings.nbLessons ? UI.planL : curLesson(), C = dfCyc(n), E = C.ex || [];
-  return `<div class="card df-help"><b>🗺️ Programmation des leçons</b> : uniquement ce qui est propre à chaque leçon (exercices et réglages, équipes, parcours, pilier observé, leçon en cours). Ce qui cadre tout le cycle (piste, fils, forme des piliers, jokers) se règle avant dans <button class="btn small" data-action="tab" data-tab="lecons">⚙️ Paramètres du cycle</button></div>
+function dfProfPlan(){ return dfProfPlan0() + (UI.profTab === 'prog' ? flowNext('appel', '✅ Suivant : faire l\'appel') : ''); }
+function dfProfPlan0(){
+  const J = UI.profTab === 'prog', n = !J && UI.planL && UI.planL <= S.settings.nbLessons ? UI.planL : curLesson(), C = dfCyc(n), E = C.ex || [];
+  return `${J ? `<p class="muted">Exercices de la leçon ${n} et leurs réglages. Le programme de tout le cycle : ${PSECT.prep.ico} ${esc(PSECT.prep.t)} → 🗺️ Programmation des leçons.</p>` : `<div class="card df-help"><b>🗺️ Programmation des leçons</b> : uniquement ce qui est propre à chaque leçon (exercices et réglages, équipes, parcours, pilier observé, leçon en cours). Ce qui cadre tout le cycle (piste, fils, forme des piliers, jokers) se règle avant dans <button class="btn small" data-action="tab" data-tab="lecons">⚙️ Paramètres du cycle</button></div>
     <div class="card"><div class="btn-row spread"><div class="lchips"><b>Leçon</b>${Array.from({ length: S.settings.nbLessons }, (_, k) => k + 1).map(l => `<button class="chip ${l === n ? 'on' : ''}" data-action="dfPL" data-n="${l}">${l === curLesson() ? '▶ ' : ''}${l} ${dfExs(l).map(e => DFX[e.t].ico).join('')}</button>`).join('')}</div>
       <div class="btn-row"><button class="btn small" data-action="dfCycPrint">🖨 Fiche du cycle</button></div></div>
-      <p class="muted">▶ = leçon en cours (celle envoyée par le QR). Chaque leçon contient 1 à 4 exercices. <b>Renvoyez le QR de la leçon</b> après une modification.</p></div>
+      <p class="muted">▶ = leçon en cours (celle envoyée par le QR). Chaque leçon contient 1 à 4 exercices. <b>Renvoyez le QR de la leçon</b> après une modification.</p></div>`}
     <div class="card strong"><div class="btn-row spread"><h3 style="margin:0">Leçon ${n} · ${esc(lesson(n).title || C.title || '—')}</h3>
       <div class="btn-row"><button class="btn small" data-action="dfLTitle" data-n="${n}">✎ Titre</button>${S.params && S.params.cyc && S.params.cyc[n] ? `<button class="btn small ghost" data-action="dfLReset" data-n="${n}">↺ Leçon par défaut</button>` : ''}</div></div>
       <div class="form-row"><span>Leçon en cours (envoyée par le QR)</span>${n === curLesson() ? '<b>✓ Oui</b>' : `<button class="btn small" data-action="setLesson" data-n="${n}">▶ En faire la leçon en cours</button>`}</div>

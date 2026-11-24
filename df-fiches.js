@@ -71,7 +71,7 @@ const DF_FICHES = {
       return {
       but:`All finishers : courir ${fmtN(d, 0)} m en tenant TON temps visé (${p} % de ta VMA). Les plus lents partent en premier : si chacun tient son temps, toute la classe franchit la ligne ENSEMBLE.`,
       savoir:[`Ton temps visé = le temps pour courir ${fmtN(d, 0)} m à ${p} % de ta VMA. Exemple : VMA 10 → ${ts(t10)} · VMA 12 → ${ts(t12)} · VMA 15 → ${ts(t15)}.`, `Ton heure de départ = l'écart entre ton temps visé et celui du coureur le plus lent. Avec ces exemples : l'élève à 10 km/h part au top, celui à 12 km/h part ${ts(t10 - t12)} plus tard, celui à 15 km/h ${ts(t10 - t15)} plus tard.`, 'Tu arrives avant les autres ? Tu es parti trop vite. Tu arrives après ? Tu n\'as pas tenu ton allure.', 'Le résultat se voit tout de suite : l\'écart entre le premier et le dernier arrivé montre si la classe a bien géré son allure.'],
-      deroul:['Échauffement progressif.', 'Avant le top, la tablette affiche et annonce l\'ordre des départs. Repère quand tu pars.', 'Au top, les premiers partent. Ensuite, la tablette annonce ton prénom 10 secondes avant ton départ (« Léa part dans 10 secondes ») : tu pars au coup de sifflet, ni avant ni après.', 'À l\'arrivée, ton chronométreur touche 🏁 : ton temps est compté depuis TON départ, et comparé à ton temps visé.'],
+      deroul:['Échauffement progressif.', 'Avant le top, la tablette affiche et annonce l\'ordre des départs. Repère quand tu pars.', 'Au top, les premiers partent. Ensuite, la tablette annonce ton prénom 10 secondes avant ton départ (« Léa, dans 10 secondes ») : tu pars au coup de sifflet, ni avant ni après.', 'À l\'arrivée, ton chronométreur touche 🏁 : ton temps est compté depuis TON départ, et comparé à ton temps visé.'],
       roles:['Coureur : partir au coup de sifflet qui suit l\'annonce de mon prénom et tenir mon allure, sans courir après les autres.', 'Starter : vérifier que chacun part au bon moment.', 'Chronométreur : toucher 🏁 quand mon camarade passe la ligne.'],
       reussite:['Je termine à moins de 3 % de mon temps visé (vert), ou à moins de 6 % (orange).', 'Je ne rattrape pas les autres trop vite : c\'est en tenant mon allure que je les rejoins à la ligne.', 'La classe arrive groupée.'],
       secu:['Échauffement complet.', 'Les coureurs qui attendent leur départ restent hors de la piste.', 'Je m\'arrête si j\'ai mal.'],
@@ -221,7 +221,22 @@ td .df-ab{position:static}.df-fo{position:static;margin-left:6px}.df-fo.on{backg
 .df-pnb{border:3px solid var(--navy);border-radius:12px;background:#fff;color:var(--navy);padding:6px 2px;display:flex;flex-direction:column;align-items:center;min-height:62px}
 .df-pnb b{font-size:24px;line-height:1}.df-pnb small{font-size:12px;font-weight:700;color:var(--grey)}
 .df-pnb:not([disabled]):active{background:var(--orange);color:#fff}.df-pnb[disabled]{opacity:.45}
-.df-wide{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}.df-wide .tile.df-tile{align-items:flex-start;padding-bottom:52px}
+/* tuiles d'arrivée compactes : 5 colonnes */
+.df-wide{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+@media (max-width:900px){.df-wide{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:560px){.df-wide{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.df-wide .tile.df-tile{align-items:stretch;padding:4px 6px 5px 14px;min-height:0;gap:2px;border-width:2px;border-radius:10px}
+.df-wide .tile .band{width:8px}
+.df-wide .tile .name{font-size:15px;line-height:1.15;padding-right:26px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.df-wide .tile .df-big{font-size:20px!important;line-height:1.1}
+.df-wide .tile .meta{font-size:11px;line-height:1.25;font-weight:600;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.df-th{display:flex;align-items:baseline;justify-content:space-between;gap:6px;width:100%;padding-right:26px}.df-th .name{padding-right:0!important;min-width:0}
+.df-tm{font-size:17px;font-weight:900;white-space:nowrap;color:var(--ink)}
+.df-wide .tile .btn-row{gap:4px;flex-wrap:nowrap;margin:0}
+.df-wide .tile .btn{min-height:32px;padding:3px 6px;font-size:13px;border-radius:8px}
+.df-wide .tile .df-fin{flex:1;min-height:34px;font-size:15px}
+.df-wide .tile .df-jok{font-size:12px;min-height:28px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.df-wide .tile .df-ab{top:3px;right:3px;bottom:auto;width:24px;height:24px;min-height:0;min-width:0;font-size:12px;padding:0}
 .df-fin{min-height:58px;font-size:20px}.df-jok{text-align:left}
 .df-score{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:10px}
 .df-sc{border:4px solid var(--tc);border-radius:14px;padding:8px 12px;background:#fff;display:flex;flex-direction:column}.df-sc span{font-size:26px;font-weight:900}

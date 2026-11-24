@@ -1,6 +1,6 @@
 # Demi-fond N'EPS
 
-CA1 · Demi-fond · performance auto-référencée · Quentin Delisle · socle N'EPS 1.3.0 · **v2.8.1**
+CA1 · Demi-fond · performance auto-référencée · Quentin Delisle · socle N'EPS 1.3.0 · **v2.8.2**
 
 ## Fichiers
 
@@ -90,4 +90,9 @@ Nouvelles situations à ajouter dans la Programmation des leçons (le cycle par 
 
 - **📄 Piliers du jour (PDF)** pour chaque leçon : niveaux notés par les observateurs pour chaque pilier de la leçon, observateurs, score, évaluation de l'enseignant (🎓), rappel des niveaux. Boutons dans 🧰 Ma leçon → 🏁 Bilan de la leçon, dans 📊 Bilan des exercices et dans 🎓 Suivi des piliers.
 - **Tous les PDF / impressions** : plus d'en-tête ni de pied de page du navigateur (adresse, titre, date) ; seule mention en pied de page : « By Quentin Delisle ».
-- **All finishers** : la voix annonce « Léa et Tom partent dans 10 secondes », puis coup de sifflet au départ (plus de prénom au départ).
+- **All finishers** : la voix annonce « Léa et Tom, dans 10 secondes », puis coup de sifflet au départ.
+
+## Version 2.8.2
+
+- Tuiles d'arrivée compactes (course chronométrée, All finishers, pelotons, évaluation 3 × 500 m) : 5 colonnes sur tablette, temps court à côté du prénom (2'10"6), boutons « 🏁 Arrivée » et « ✎ Temps » sur une ligne, 🚩 abandon en haut à droite.
+- Voix All finishers : « Léa et Tom, dans 10 secondes », puis coup de sifflet.

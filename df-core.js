@@ -387,7 +387,8 @@ const DF_LINE = {};       // résumé par type dans la fiche élève
 /* tuile d'élève commune */
 function dfTile(sid, inner, opts = {}){
   const a = attOf(curLesson(), sid);
-  return `<div class="tile df-tile ${opts.cls || ''} ${isOff(a) ? 'off' : ''}" ${opts.attrs || ''} style="${opts.style || ''}">${band(sid)}<span class="name">${esc(nameOf(sid))}</span>${inner}</div>`;
+  const nm = `<span class="name">${esc(nameOf(sid))}</span>`;
+  return `<div class="tile df-tile ${opts.cls || ''} ${isOff(a) ? 'off' : ''}" ${opts.attrs || ''} style="${opts.style || ''}">${band(sid)}${opts.right != null ? `<div class="df-th">${nm}${opts.right}</div>` : nm}${inner}</div>`;
 }
 const dfAbBtn = (n, i, sid) => { const x = dfX(n, sid, i); return `<button class="df-ab ${x && x.ab ? 'on' : ''}" data-action="dfAb" data-i="${i}" data-sid="${sid}" title="Abandon">🚩</button>`; };
 

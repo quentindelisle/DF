@@ -348,6 +348,8 @@ DF_LINE.eval = (n, sid, i, e) => { const S_ = dfEvScore(n, sid, i, e); if (!S_) 
 /* =====================================================================
    COURSE CHRONOMÉTRÉE : distance choisie, temps en minutes et secondes
    ===================================================================== */
+/* temps court pour les tuiles : 2'10"6 */
+const dfTs = s => { if (s == null || !isFinite(s)) return '—'; const m = Math.floor(s / 60), r = s - m * 60, sec = Math.floor(r), d = Math.round((r - sec) * 10) % 10; return `${m ? m + '\'' : ''}${m ? String(sec).padStart(2, '0') : sec}"${d}`; };
 const dfMSs = s => { if (s == null || !isFinite(s)) return '—'; const m = Math.floor(s / 60), r = s - m * 60, rs = (Math.round(r * 10) / 10).toFixed(1).replace('.', ','); return m ? `${m} min ${r < 10 ? '0' : ''}${rs} s` : `${rs} s`; };
 function dfChronoView(n, i, e){
   if (e.dep === 'af') return dfAfView(n, i, e);
@@ -355,10 +357,9 @@ function dfChronoView(n, i, e){
   return `${dfGrpChips(n, i, e)}${nb > 1 ? `<div class="filters"><b>Course :</b>${Array.from({ length: nb }, (_, q) => `<button class="chip ${q === k ? 'on' : ''}" data-action="dfK" data-k="${q}">${q + 1}</button>`).join('')}</div>` : ''}
     <p class="muted">Distance : <b>${fmtN(e.d, 0)} m</b>. Départ commun avec ▶, puis 🏁 à l'arrivée de chaque coureur. Ou saisissez le temps (minutes et secondes) avec ✎.</p>
     ${dfChrHTML(key)}<div class="tiles df-wide">${list.map(s => { const x = dfX(n, s.id, i) || {}, cc = (x.c || [])[k] || {}, ref = dfVmaRef(n, s.id, i), v = cc.t ? e.d / cc.t * 3.6 : null, pct = cc.t && ref ? dfPctOf(e.d, cc.t, ref.v) : null;
-      return dfTile(s.id, `<span class="df-big" style="font-size:30px">${cc.t ? dfMSs(cc.t) : '—'}</span>
-        <span class="meta">${cc.t ? `<b>${fmtN(v, 1)} km/h</b>${pct != null ? ` · ${fmtN(pct, 0)} % de sa VMA` : ''}` : ref ? `VMA ${fmtN(ref.v, 1)} · à 100 % : ${dfMSs(dfTime(e.d, ref.v, 100))}` : 'pas de VMA'}</span>
+      return dfTile(s.id, `<span class="meta">${cc.t ? `<b>${fmtN(v, 1)} km/h</b>${pct != null ? ` · ${fmtN(pct, 0)} % VMA` : ''}` : ref ? `VMA ${fmtN(ref.v, 1)} · 100 % : ${dfMSs(dfTime(e.d, ref.v, 100))}` : 'pas de VMA'}</span>
         <div class="btn-row">${cc.t ? '' : `<button class="btn green df-fin" data-action="dfFin" data-sid="${s.id}" data-i="${i}" data-k="${k}" data-key="${key}" ${c.run ? '' : 'disabled'}>🏁 Arrivée</button>`}
-          <button class="btn small" data-action="dfCTms" data-sid="${s.id}" data-i="${i}" data-k="${k}">✎ ${cc.t ? 'Modifier' : 'Saisir'} le temps</button></div>${dfAbBtn(n, i, s.id)}`, { cls: x.ab ? 'abd' : '' }); }).join('')}</div>`;
+          <button class="btn small" data-action="dfCTms" data-sid="${s.id}" data-i="${i}" data-k="${k}">✎ ${cc.t ? 'Corriger' : 'Temps'}</button></div>${dfAbBtn(n, i, s.id)}`, { cls: x.ab ? 'abd' : '', right: cc.t ? `<b class="df-tm">${dfTs(cc.t)}</b>` : '' }); }).join('')}</div>`;
 }
 
 /* =====================================================================
@@ -385,7 +386,7 @@ function dfAfView(n, i, e){
   const spread = arr.length > 1 ? arr[arr.length - 1].at - arr[0].at : null, noV = P.R.filter(r => r.tv == null);
   return `${dfGrpChips(n, i, e)}${nb > 1 ? `<div class="filters"><b>Course :</b>${Array.from({ length: nb }, (_, q) => `<button class="chip ${q === k ? 'on' : ''}" data-action="dfK" data-k="${q}">${q + 1}</button>`).join('')}</div>` : ''}
     <div class="card df-af"><div class="btn-row spread"><h3 style="margin:0 0 6px">🏁 All finishers · ${fmtN(e.d, 0)} m à ${e.pct || 90} % de VMA</h3>${dfVoiceBtn()}</div>
-      <p class="muted" style="margin:0">Les plus lents partent les premiers. Si chacun tient son temps visé, <b>tout le monde arrive ensemble</b>. Au top, le premier groupe part ; ensuite la tablette annonce les prénoms 10 s avant leur départ (« Léa et Tom partent dans 10 secondes »), puis siffle au départ. Touchez 🏁 quand le coureur passe la ligne : son temps est calculé depuis <b>son</b> départ.</p>
+      <p class="muted" style="margin:0">Les plus lents partent les premiers. Si chacun tient son temps visé, <b>tout le monde arrive ensemble</b>. Au top, le premier groupe part ; ensuite la tablette annonce les prénoms 10 s avant leur départ (« Léa et Tom, dans 10 secondes »), puis siffle au départ. Touchez 🏁 quand le coureur passe la ligne : son temps est calculé depuis <b>son</b> départ.</p>
       ${noV.length ? `<p class="warn-card card" style="margin:8px 0 0">⚠️ Sans VMA (départ au top, sans temps visé) : ${noV.map(r => esc(nameOf(r.sid))).join(', ')}</p>` : ''}</div>
     ${dfChrHTML(key)}<div class="df-afnext" data-afnext="${key}">${dfAfNextTxt(c, el)}</div>
     <div class="card scroll-x"><div class="btn-row spread"><h3 style="margin:0">📋 Ordre des départs</h3><button class="btn small" data-action="dfAfSay" data-key="${key}">📣 Annoncer l'ordre</button></div>
@@ -394,10 +395,9 @@ function dfAfView(n, i, e){
         return `<tr class="${x.ab ? 'abd' : ''}"><td><b>${r.off ? '+' + dfT(r.off) : 'au top'}</b></td><td class="nm">${band(r.sid)}${esc(nameOf(r.sid))}${dfForme(n, r.sid) ? ' 😓' : ''}</td><td>${r.tv ? dfT(r.tv) : '—'}</td>
           <td>${cc.t ? `<b>${dfMSs(cc.t)}</b>` : `<span data-afw="${key}" data-off="${r.off}">${dfAfWait(c, el, r.off)}</span>`}</td><td>${ec == null ? '' : `<b style="color:${dfAfCol(ec)}">${dfSgn(cc.t - r.tv)} s</b> <small>(${dfSgn(ec)} %)</small>`}</td></tr>`; }).join('')}</tbody></table></div>
     <div class="tiles df-wide">${P.R.map(r => { const s = { id: r.sid }, x = dfX(n, r.sid, i) || {}, cc = (x.c || [])[k] || {}, ec = dfAfEcart(cc.t, r.tv);
-      return dfTile(s.id, `<span class="df-big" style="font-size:30px;${ec != null ? 'color:' + dfAfCol(ec) : ''}">${cc.t ? dfMSs(cc.t) : '—'}</span>
-        <span class="meta">${r.tv ? `Temps visé <b>${dfT(r.tv)}</b> · départ ${r.off ? '+' + dfT(r.off) : 'au top'}` : 'pas de VMA · départ au top'}${ec != null ? ` · écart <b>${dfSgn(cc.t - r.tv)} s</b>` : ''}</span>
+      return dfTile(s.id, `<span class="meta">${r.tv ? `visé <b>${dfT(r.tv)}</b> · ${r.off ? 'part +' + dfT(r.off) : 'au top'}` : 'pas de VMA · au top'}${ec != null ? ` · <b style="color:${dfAfCol(ec)}">${dfSgn(cc.t - r.tv)} s</b>` : ''}</span>
         <div class="btn-row">${cc.t ? '' : `<button class="btn green df-fin" data-action="dfAfFin" data-sid="${r.sid}" data-i="${i}" data-k="${k}" data-key="${key}" data-off="${r.off}" data-tv="${r.tv || ''}" ${c.run ? '' : 'disabled'}>🏁 Arrivée</button>`}
-          <button class="btn small" data-action="dfCTms" data-sid="${r.sid}" data-i="${i}" data-k="${k}">✎ ${cc.t ? 'Modifier' : 'Saisir'} le temps</button></div>${dfAbBtn(n, i, r.sid)}`, { cls: x.ab ? 'abd' : '' }); }).join('')}</div>
+          <button class="btn small" data-action="dfCTms" data-sid="${r.sid}" data-i="${i}" data-k="${k}">✎ ${cc.t ? 'Corriger' : 'Temps'}</button></div>${dfAbBtn(n, i, r.sid)}`, { cls: x.ab ? 'abd' : '', right: cc.t ? `<b class="df-tm" style="${ec != null ? 'color:' + dfAfCol(ec) : ''}">${dfTs(cc.t)}</b>` : '' }); }).join('')}</div>
     ${arr.length ? `<div class="card"><h3 style="margin:0 0 6px">🏁 Ordre d'arrivée</h3><ol class="df-afarr">${arr.map(r => { const ec = dfAfEcart(r.t, r.tv); return `<li>${band(r.sid)}<b>${esc(nameOf(r.sid))}</b> · ${dfMSs(r.t)}${ec != null ? ` · <b style="color:${dfAfCol(ec)}">${dfSgn(r.t - r.tv)} s</b>` : ''}</li>`; }).join('')}</ol>
       ${spread != null ? `<p class="df-afsp">Écart entre le premier et le dernier arrivé : <b>${dfT(spread)}</b>${spread <= 10 ? ' 🎉 la classe a très bien géré son allure !' : spread <= 30 ? ' 👍 allure plutôt bien gérée.' : ''}</p>` : ''}</div>` : ''}`;
 }
@@ -407,12 +407,12 @@ function dfAfNextTxt(c, el){
   if (!up.length) return '✓ Tout le monde est parti'; const o = up[0].off, who = up.filter(a => a.off === o).map(a => esc(a.nm)).join(', ');
   return `Prochain départ : <b>${who}</b> dans <b>${dfT(o - el)}</b>`;
 }
-/* appel des départs : « Léa et Tom partent dans 10 secondes », puis coup de sifflet au départ */
+/* appel des départs : « Léa et Tom, dans 10 secondes », puis coup de sifflet au départ */
 const dfAnd = L => L.length > 1 ? L.slice(0, -1).join(', ') + ' et ' + L[L.length - 1] : (L[0] || '');
 setInterval(() => { Object.entries(DFC).forEach(([key, c]) => { if (!c.run || !c.af) return; const el = dfChrNow(c), pv = c._afp ?? -1;
   const at = d => c.af.filter(a => a.off - d > 0.01 && a.off - d > pv && a.off - d <= el);
   if (at(0).length) dfSnd.whistle();                                     // départ : coup de sifflet seul
-  const soon = at(10); if (soon.length) dfSay(dfAnd(soon.map(a => a.nm)) + (soon.length > 1 ? ' partent' : ' part') + ' dans 10 secondes');
+  const soon = at(10); if (soon.length) dfSay(dfAnd(soon.map(a => a.nm)) + ', dans 10 secondes');
   c._afp = el;
   const nx = document.querySelector(`[data-afnext="${key}"]`); if (nx) nx.innerHTML = dfAfNextTxt(c, el);
   document.querySelectorAll(`[data-afw="${key}"]`).forEach(sp => { sp.textContent = dfAfWait(c, el, +sp.dataset.off); }); }); }, 250);

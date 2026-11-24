@@ -406,3 +406,20 @@ Object.assign(ACT, {
 /* migration au démarrage (jeux retirés en 2.8) */
 const _dfLoadRoot = loadRoot;
 loadRoot = function(){ _dfLoadRoot(); try { dfMigrate28(); save(); } catch (err) { console.warn('migration 2.8', err); } };
+
+/* =====================================================================
+   IMPRESSION / PDF : marges du navigateur supprimées (plus d'adresse, de titre ni de date),
+   mise en page faite par l'appli, seule signature en pied de page : « By Quentin Delisle »
+   ===================================================================== */
+const DF_PRINT_SIGN = 'By ' + (CFG.author || 'Quentin Delisle');
+function dfPrint(m){
+  if (!m) { window.print(); return; }
+  const kids = [...m.childNodes], t = document.createElement('table'); t.className = 'df-prt';
+  t.innerHTML = `<thead><tr><td class="df-prt-h"></td></tr></thead><tbody><tr><td class="df-prt-b"></td></tr></tbody><tfoot><tr><td class="df-prt-f">${esc(DF_PRINT_SIGN)}</td></tr></tfoot>`;
+  const b = t.querySelector('.df-prt-b'); kids.forEach(k => b.appendChild(k)); m.appendChild(t);
+  document.body.classList.add('print-modal');
+  let done = false; const back = () => { if (done) return; done = true; window.removeEventListener('afterprint', back); kids.forEach(k => m.insertBefore(k, t)); t.remove(); document.body.classList.remove('print-modal'); };
+  window.addEventListener('afterprint', back); window.print();
+}
+/* tous les boutons 🖨 de l'appli (socle compris) passent par dfPrint */
+document.addEventListener('click', ev => { const b = ev.target && ev.target.closest && ev.target.closest('[data-print]'); if (!b) return; ev.preventDefault(); ev.stopPropagation(); dfPrint(b.closest('.modal')); }, true);

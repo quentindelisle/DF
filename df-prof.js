@@ -29,8 +29,8 @@ profHub = () => { const n = curLesson(), E = dfExs(n);
   const h = _dfProfHub(), b = `<button class="hub-btn" data-action="tab" data-tab="prog"><span class="ico">🏃</span><b>Programme de la leçon</b><small>${esc(dfLessonSummary(n))}</small></button>`, k = h.indexOf('</button>');
   return k < 0 ? h.replace('<div class="hub">', '<div class="hub">' + b) : h.slice(0, k + 9) + b + h.slice(k + 9); };
 const _dfProfFin = profFin;
-profFin = () => _dfProfFin().replace('<button class="btn small" data-action="tab" data-tab="recup">', `<button class="btn small" data-action="dfFinBil">🏃 Bilan des exercices</button><button class="btn small" data-action="tab" data-tab="recup">`);
-Object.assign(ACT, { dfFinBil: () => { UI.bdL = curLesson(); go('prof', { profTab:'bilanDF' }); } });
+profFin = () => _dfProfFin().replace('<button class="btn small" data-action="tab" data-tab="recup">', `<button class="btn small" data-action="dfFinBil">🏃 Bilan des exercices</button><button class="btn small" data-action="dfPilDay">📄 Piliers du jour (PDF)</button><button class="btn small" data-action="tab" data-tab="recup">`);
+Object.assign(ACT, { dfPilDay: d => dfPilDay(+d.n || curLesson()), dfFinBil: () => { UI.bdL = curLesson(); go('prof', { profTab:'bilanDF' }); } });
 
 /* ---------- Paramètres du cycle : le plan remplace le nombre d'essais ---------- */
 profLecons = () => `<div class="card df-help"><b>⚙️ Paramètres du cycle</b> : à régler <b>en amont</b>, ils valent pour toutes les leçons (nombre de leçons, piste, fils suivis, forme des piliers, jokers). Ensuite, chaque leçon se prépare dans <button class="btn small" data-action="tab" data-tab="plan">🗺️ Programmation des leçons</button> : exercices, équipes, pilier observé, leçon en cours.</div>
@@ -212,6 +212,7 @@ const dfPP = (n, sid) => S.ppil?.[n]?.[sid] || null;
 function dfProfPil(){
   const n = UI.pilL || curLesson();
   return `<div class="card"><div class="lchips"><b>Leçon</b>${Array.from({ length: S.settings.nbLessons }, (_, k) => k + 1).map(l => `<button class="chip ${l === n ? 'on' : ''}" data-action="dfPilL" data-n="${l}">${l}${Object.keys(S.ppil?.[l] || {}).length ? ' ✓' : ''}</button>`).join('')}</div>
+      <div class="btn-row"><button class="btn small" data-action="dfPilDay" data-n="${n}">📄 Piliers du jour (PDF) · leçon ${n}</button></div>
       <p class="muted">Évaluez quand vous le décidez : touchez un élève. Votre évaluation compte pour 2/3 du fil bleu et sert de référence à la qualité des observations des élèves.</p>
       ${dfLessonPil(n).length ? '' : '<p class="warn-card card">⚠️ Aucun pilier n\'est prévu dans la leçon ' + n + ' : ce que vous noteriez ici ne compte pas dans l\'évaluation. Choisissez une leçon avec pilier, ou ajoutez-en un dans la Programmation.</p>'}</div>
     ${groupChips(UI.pilG ?? null, 'dfPilG')}<div class="tiles">${sortedStudents().filter(s => UI.pilG == null || (s.grp || 0) === UI.pilG).map(s => { const m = dfPilMean(dfPP(n, s.id));
@@ -229,13 +230,45 @@ function dfPPmodal(sid){
 function dfNextPil(sid){ const L = sortedStudents().filter(s => UI.pilG == null || (s.grp || 0) === UI.pilG), k = L.findIndex(s => s.id === sid), nx = L[k + 1]; return nx ? `<button class="btn" data-nx="${nx.id}">${esc(nameOf(nx.id))} ▶</button>` : ''; }
 
 /* =====================================================================
+   PILIERS DU JOUR (PDF) : pour une leçon, les niveaux observés par pilier, élève par élève
+   ===================================================================== */
+const DF_LVC = ['#9AA3B2', '#D0161B', '#F59E0B', '#7CB342', '#1E8E3E'];
+function dfPilVal(p, v){
+  if (v == null) return null; const m = dfPilMode(p);
+  if (m === 'on') { if (!Array.isArray(v)) return null; const o = v.filter(x => x != null); return o.length ? `<span class="df-pd-lv" style="background:${DF_LVC[Math.min(4, 1 + Math.round(o.filter(Boolean).length / o.length * 3))]}">${o.filter(Boolean).length}/${o.length}</span>` : null; }
+  if (m === 'ech') return typeof v === 'number' ? `<span class="df-pd-lv" style="background:${DF_LVC[Math.min(4, 1 + Math.round((v - 1) / 9 * 3))]}">${v}/10</span>` : null;
+  return typeof v === 'number' ? `<span class="df-pd-lv" style="background:${DF_LVC[Math.max(1, Math.min(4, v))]}">${v}</span>` : null;
+}
+function dfPilDay(n){
+  const P = dfLessonPil(n).map(id => DF_PIL.find(p => p.id === id)).filter(Boolean);
+  if (!P.length) return toast(`Aucun pilier prévu dans la leçon ${n}`);
+  const E = dfExs(n), Lp = sortedStudents().filter(s => !isOff(attOf(n, s.id))), Off = sortedStudents().filter(s => isOff(attOf(n, s.id)));
+  const exo = E.map((e, i) => dfObs(e) ? `${DFX[e.t].ico} ${esc(DFX[e.t].n)}` : null).filter(Boolean);
+  const rows = Lp.map(s => {
+    const obs = []; E.forEach((e, i) => { if (!dfObs(e)) return; Object.values((dfX(n, s.id, i) || {}).pil || {}).forEach(o => { if (o && dfPilMean(o) != null) obs.push(o); }); });
+    const pp = dfPP(n, s.id) || {}, by = [...new Set(obs.map(o => o.by).filter(Boolean))].map(nameOf);
+    const sc = vals(obs.map(dfPilMean)), prof = dfPilMean(pp);
+    return `<tr><td class="nm"><b>${esc(nameOf(s.id))}</b></td>${P.map(p => { const v = obs.map(o => dfPilVal(p, o[p.id])).filter(Boolean), t = dfPilVal(p, pp[p.id]);
+      return `<td>${v.join('') || '<span class="muted">—</span>'}${t ? `<br><small>🎓 ${t}</small>` : ''}</td>`; }).join('')}
+      <td>${by.length ? esc(by.join(', ')) : '<span class="muted">—</span>'}</td><td>${sc.length ? Math.round(avg(sc) * 100) + ' %' : '—'}${prof != null ? `<br><small>🎓 ${Math.round(prof * 100)} %</small>` : ''}</td></tr>`; }).join('');
+  const leg = P.map(p => `<div><b>${esc(p.n)}</b>${dfPilMode(p) === 'desc' ? `<ol>${p.desc.map(d => `<li>${esc(d.l)}</li>`).join('')}</ol>` : dfPilMode(p) === 'on' ? `<ol>${p.crit.map(c => `<li>${esc(c)}</li>`).join('')}</ol><small>nombre de critères vus / observés</small>` : '<br><small>échelle de 1 à 10</small>'}</div>`).join('');
+  modal(`<div class="df-pd"><h2>👀 Piliers du jour · ${esc(lessonLabel(n))}</h2>
+    <p class="muted" style="margin:0">${esc(className())} · 🎯 ${esc(dfPilNames(dfLessonPil(n)))}${exo.length ? ' · observés pendant : ' + exo.join(', ') : ' · ⚠️ aucun exercice observé dans cette leçon'}</p>
+    <div class="df-pd-leg">${leg}</div>
+    <table class="tbl"><thead><tr><th>Élève</th>${P.map(p => `<th>${esc(p.n)}</th>`).join('')}<th>Observé par</th><th>Score</th></tr></thead><tbody>${rows}</tbody></table>
+    <p class="muted small">Niveaux notés par les observateurs (un chiffre par observation) · 🎓 = évaluation de l'enseignant.${Off.length ? ` Absents ou dispensés : ${Off.map(s => esc(nameOf(s.id))).join(', ')}.` : ''}</p></div>
+    <div class="btn-row spread no-print" style="margin-top:12px"><button class="btn" data-print>🖨 Imprimer / PDF</button><button class="btn primary" data-close>Fermer</button></div>`, { wide: true });
+  dfModalBind();
+}
+
+/* =====================================================================
    BILAN DES EXERCICES (par leçon)
    ===================================================================== */
 function dfProfBilan(){
   const n = UI.bdL || curLesson(), E = dfExs(n), L = sortedStudents();
   const tot = sid => { const v = vals(E.map((_, i) => dfExDist(n, sid, i))); return v.length ? v.reduce((a, b) => a + b, 0) : null; };
   let h = `<div class="card"><div class="lchips"><b>Leçon</b>${Array.from({ length: S.settings.nbLessons }, (_, k) => k + 1).map(l => `<button class="chip ${l === n ? 'on' : ''}" data-action="dfBdL" data-n="${l}">${l}</button>`).join('')}</div>
-    <b>${esc(lessonLabel(n))}</b> <span class="muted">· ${esc(dfLessonSummary(n))}</span></div>
+    <b>${esc(lessonLabel(n))}</b> <span class="muted">· ${esc(dfLessonSummary(n))}</span><div class="btn-row" style="margin-top:6px"><button class="btn small" data-action="dfPilDay" data-n="${n}">📄 Piliers du jour (PDF)</button></div></div>
     <div class="card scroll-x"><h3>📏 Distance courue dans la leçon</h3><table class="tbl"><thead><tr><th>Élève</th>${E.map(e => `<th>${DFX[e.t].ico} ${esc(DFX[e.t].n)}</th>`).join('')}<th>Total</th><th>Abandons</th></tr></thead><tbody>
     ${L.map(s => { const a = attOf(n, s.id); if (isOff(a)) return `<tr><td class="nm">${band(s.id)}${esc(nameOf(s.id))}</td><td colspan="${E.length + 2}" class="muted">${ATT[a].n}</td></tr>`;
       return `<tr><td class="nm"><button class="lnk" data-action="stuDetail" data-sid="${s.id}">${band(s.id)}${esc(nameOf(s.id))}</button></td>${E.map((_, i) => { const x = dfX(n, s.id, i); return `<td>${x && x.ab ? '🚩 ' : ''}${dfKm(dfExDist(n, s.id, i))}</td>`; }).join('')}<td><b>${dfKm(tot(s.id))}</b></td><td>${E.filter((_, i) => (dfX(n, s.id, i) || {}).ab).length || ''}</td></tr>`; }).join('')}</tbody></table></div>`;

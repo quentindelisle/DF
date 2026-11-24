@@ -1,6 +1,6 @@
 # Demi-fond N'EPS
 
-CA1 · Demi-fond · performance auto-référencée · Quentin Delisle · socle N'EPS 1.3.0 · **v2.8.0**
+CA1 · Demi-fond · performance auto-référencée · Quentin Delisle · socle N'EPS 1.3.0 · **v2.8.1**
 
 ## Fichiers
 
@@ -85,3 +85,9 @@ Nouvelles situations à ajouter dans la Programmation des leçons (le cycle par 
 
 - Zombie Frac', Kart'Endurance et Gare aux loups sont retirés. Au démarrage, une leçon programmée avec Zombie Frac' le retrouve comme fractionné (court ou long selon sa forme, mêmes réglages) ; Kart'Endurance et Gare aux loups sont enlevés de la programmation.
 - Restent de la 2.6 : Run Express (nouveau nom des Aventuriers) et le départ All finishers de la course chronométrée.
+
+## Version 2.8.1
+
+- **📄 Piliers du jour (PDF)** pour chaque leçon : niveaux notés par les observateurs pour chaque pilier de la leçon, observateurs, score, évaluation de l'enseignant (🎓), rappel des niveaux. Boutons dans 🧰 Ma leçon → 🏁 Bilan de la leçon, dans 📊 Bilan des exercices et dans 🎓 Suivi des piliers.
+- **Tous les PDF / impressions** : plus d'en-tête ni de pied de page du navigateur (adresse, titre, date) ; seule mention en pied de page : « By Quentin Delisle ».
+- **All finishers** : la voix annonce « Léa et Tom partent dans 10 secondes », puis coup de sifflet au départ (plus de prénom au départ).

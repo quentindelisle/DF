@@ -71,8 +71,8 @@ const DF_FICHES = {
       return {
       but:`All finishers : courir ${fmtN(d, 0)} m en tenant TON temps visé (${p} % de ta VMA). Les plus lents partent en premier : si chacun tient son temps, toute la classe franchit la ligne ENSEMBLE.`,
       savoir:[`Ton temps visé = le temps pour courir ${fmtN(d, 0)} m à ${p} % de ta VMA. Exemple : VMA 10 → ${ts(t10)} · VMA 12 → ${ts(t12)} · VMA 15 → ${ts(t15)}.`, `Ton heure de départ = l'écart entre ton temps visé et celui du coureur le plus lent. Avec ces exemples : l'élève à 10 km/h part au top, celui à 12 km/h part ${ts(t10 - t12)} plus tard, celui à 15 km/h ${ts(t10 - t15)} plus tard.`, 'Tu arrives avant les autres ? Tu es parti trop vite. Tu arrives après ? Tu n\'as pas tenu ton allure.', 'Le résultat se voit tout de suite : l\'écart entre le premier et le dernier arrivé montre si la classe a bien géré son allure.'],
-      deroul:['Échauffement progressif.', 'Avant le top, la tablette affiche et annonce l\'ordre des départs. Repère quand tu pars.', 'Au top, les premiers partent. Ensuite, la tablette annonce ton prénom 10 secondes avant ton départ, puis siffle : tu pars à l\'annonce de ton prénom, ni avant ni après.', 'À l\'arrivée, ton chronométreur touche 🏁 : ton temps est compté depuis TON départ, et comparé à ton temps visé.'],
-      roles:['Coureur : partir à l\'annonce de mon prénom et tenir mon allure, sans courir après les autres.', 'Starter : vérifier que chacun part au bon moment.', 'Chronométreur : toucher 🏁 quand mon camarade passe la ligne.'],
+      deroul:['Échauffement progressif.', 'Avant le top, la tablette affiche et annonce l\'ordre des départs. Repère quand tu pars.', 'Au top, les premiers partent. Ensuite, la tablette annonce ton prénom 10 secondes avant ton départ (« Léa part dans 10 secondes ») : tu pars au coup de sifflet, ni avant ni après.', 'À l\'arrivée, ton chronométreur touche 🏁 : ton temps est compté depuis TON départ, et comparé à ton temps visé.'],
+      roles:['Coureur : partir au coup de sifflet qui suit l\'annonce de mon prénom et tenir mon allure, sans courir après les autres.', 'Starter : vérifier que chacun part au bon moment.', 'Chronométreur : toucher 🏁 quand mon camarade passe la ligne.'],
       reussite:['Je termine à moins de 3 % de mon temps visé (vert), ou à moins de 6 % (orange).', 'Je ne rattrape pas les autres trop vite : c\'est en tenant mon allure que je les rejoins à la ligne.', 'La classe arrive groupée.'],
       secu:['Échauffement complet.', 'Les coureurs qui attendent leur départ restent hors de la piste.', 'Je m\'arrête si j\'ai mal.'],
       prep:[`Calcule ton temps visé : ${fmtN(d, 0)} ÷ (ta VMA × ${p / 100} ÷ 3,6) secondes.`, 'Calcule aussi ton temps au tour : c\'est ton repère pendant la course.', 'Réfléchis : pourquoi faut-il partir à son allure, même si on voit les autres devant ?'] }; }
@@ -265,6 +265,14 @@ tr.abd{opacity:.5}
 .df-compd summary{cursor:pointer;padding:6px 0}.df-tkrow{padding:6px 0;border-top:1px solid #E6EBF3}
 .df-sv{min-width:90px;text-align:center}
 .up{color:#1E8E3E}.down{color:#D0161B}
+/* ---- impression : pas d'en-tête / pied de page du navigateur ---- */
+@page{margin:0}
+@media screen{.df-prt>thead,.df-prt>tfoot{display:none}}
+@media print{#toast,#signature,#app-version,#topbar,.tabbar{display:none!important}html,body,body.print-modal{background:#fff!important;height:auto!important;min-height:0!important;padding:0!important;margin:0!important}body.print-modal main{display:none!important}body.print-modal .modal-bg{min-height:0!important;height:auto!important}body.print-modal .modal{border-radius:0!important;box-shadow:none!important;background:#fff!important;padding:0!important}.df-prt{width:100%;border-collapse:collapse}.df-prt>tbody>tr>td{padding:0 14mm}.df-prt-h{height:12mm;padding:0!important}.df-prt-f{height:14mm;padding:0 0 6mm!important;text-align:center;vertical-align:bottom;font-size:9pt;color:#555}}
+/* ---- Piliers du jour ---- */
+.df-pd h2{margin:0 0 4px}.df-pd .tbl td,.df-pd .tbl th{font-size:13px;vertical-align:top}.df-pd-lv{display:inline-block;min-width:22px;text-align:center;border-radius:6px;color:#fff;font-weight:800;padding:0 4px;margin:0 2px 2px 0}
+.df-pd-leg{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px 14px;margin:6px 0 10px;font-size:12px}.df-pd-leg ol{margin:2px 0 0;padding-left:18px}
+@media print{.df-pd p.muted{font-size:12px}.df-pd h2{font-size:20px}.df-pd .tbl{font-size:11px}.df-pd tr{break-inside:avoid}}
 /* ---- All finishers ---- */
 .df-af{border-left:10px solid #5B6B8C}.df-afnext{font-size:22px;font-weight:800;text-align:center;margin:-4px 0 12px;color:var(--navy)}
 .df-aftbl td,.df-aftbl th{white-space:nowrap}.df-afarr{margin:0;padding-left:28px;columns:2;column-gap:28px}.df-afarr li{margin:4px 0;break-inside:avoid}
